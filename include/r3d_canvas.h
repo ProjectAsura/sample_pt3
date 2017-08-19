@@ -1,0 +1,50 @@
+﻿//-------------------------------------------------------------------------------------------------
+// File : r3d_canvas.h
+// Desc : Canvas Module.
+// Copyright(c) Project Asura. All right reserved.
+//-------------------------------------------------------------------------------------------------
+#pragma once
+
+//-------------------------------------------------------------------------------------------------
+// Includes
+//-------------------------------------------------------------------------------------------------
+#include <r3d_math.h>
+#include <vector>
+
+
+namespace r3d {
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Canvas class
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class Canvas
+{
+public:
+    Canvas();
+    ~Canvas();
+
+    void            resize(int w, int h);
+    Vector3&        at(int x, int y);
+    const Vector3&  at(int x, int y) const;
+    const Vector3*  pixels() const;
+    void            add(int x, int y, const Vector3& value);
+
+    bool write(const char* filename);
+    bool write(int counter);
+
+private:
+    int                     m_w;
+    int                     m_h;
+    std::vector<Vector3>    m_pixels;
+    std::vector<Vector3>    m_temps;
+    std::vector<uint8_t>    m_output;
+
+    void tonemap_none();
+    void tonemap_reinhard();
+    void tonemap_aces();
+    void reveser_gamma();
+
+    void median_filter();
+};
+
+} // namespace r3d

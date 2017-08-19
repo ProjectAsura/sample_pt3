@@ -1,0 +1,16 @@
+xcopy "C:\Windows\System32\ntdll.dll" %1 /Y /C
+xcopy "C:\Windows\System32\kernel32.dll" %1 /Y /C
+xcopy "C:\Windows\System32\KernelBase.dll" %1 /Y /C
+xcopy "C:\Windows\System32\ucrtbase.dll" %1 /Y /C
+xcopy "C:\Windows\System32\msvcp140.dll" %1 /Y /C
+xcopy "C:\Windows\System32\vcruntime140.dll" %1 /Y /C
+xcopy "C:\Windows\System32\vcomp140.dll" %1 /Y /C
+xcopy "C:\Windows\System32\user32.dll" %1 /Y /C
+xcopy "C:\Windows\System32\win32u.dll" %1 /Y /C
+xcopy "C:\Windows\System32\gdi32.dll" %1 /Y /C
+xcopy "C:\Windows\System32\gdi32full.dll" %1 /Y /C
+xcopy "C:\Windows\System32\msvcp_win.dll" %1 /Y /C
+xcopy "C:\Windows\System32\imm32.dll" %1 /Y /C
+xcopy "C:\Windows\System32\kernel.appcore.dll" %1 /Y /C
+xcopy "C:\Windows\System32\msvcrt.dll" %1 /Y /C
+xcopy "C:\Windows\System32\rpcrt4.dll" %1 /Y /C
