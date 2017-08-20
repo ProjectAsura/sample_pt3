@@ -1,4 +1,4 @@
-//-------------------------------------------------------------------------------------------------
+﻿//-------------------------------------------------------------------------------------------------
 // File : r3d_canvas.cpp
 // Desc : Canvas Module.
 // Copyright(c) Project Asura. All right reserved.
@@ -19,7 +19,7 @@ namespace {
 //------------------------------------------------------------------------------------------------
 float RGBToY(const Vector3& value)
 {
-    // see. https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.601-7-201103-I!!PDF-E.pdf
+    // cf. https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.601-7-201103-I!!PDF-E.pdf
     const Vector3 bt601_to_luminance(0.299f, 0.587f, 0.114f);
     return dot(value, bt601_to_luminance);
 }
@@ -69,7 +69,6 @@ void CalcLogAve
     aveLw = expf( aveLw );
 }
 
-
 } // namespace 
 
 
@@ -91,6 +90,9 @@ Canvas::Canvas()
 Canvas::~Canvas()
 { m_pixels.clear(); }
 
+//-------------------------------------------------------------------------------------------------
+//      レンダーターゲットのサイズを設定します.
+//-------------------------------------------------------------------------------------------------
 void Canvas::resize(int w, int h)
 {
     m_w = w;
@@ -134,7 +136,7 @@ void Canvas::add(int x, int y, const Vector3& value)
 bool Canvas::write(const char* filename)
 {
     tonemap_aces();
-    reveser_gamma();
+    srgb_correction();
 
     for (size_t i = 0; i < m_temps.size(); ++i)
     {
@@ -231,9 +233,9 @@ void Canvas::tonemap_aces()
 }
 
 //-------------------------------------------------------------------------------------------------
-//      ガンマ2.2の逆変換を適用します.
+//      ガンマ補正を適用します.
 //-------------------------------------------------------------------------------------------------
-void Canvas::reveser_gamma()
+void Canvas::gamma_correction()
 {
     for(size_t i=0; i<m_temps.size(); ++i)
     {
@@ -241,6 +243,32 @@ void Canvas::reveser_gamma()
         m_temps[i].x = pow(value.x, 1.0f / 2.2f);
         m_temps[i].y = pow(value.y, 1.0f / 2.2f);
         m_temps[i].z = pow(value.z, 1.0f / 2.2f);
+    }
+}
+
+//-------------------------------------------------------------------------------------------------
+//      sRGB変換を適用します.
+//-------------------------------------------------------------------------------------------------
+void Canvas::srgb_correction()
+{
+    for(size_t i=0; i<m_temps.size(); ++i)
+    {
+        auto value = m_temps[i];
+
+        if (value.x < 0.0031308f)
+        { m_temps[i].x = 12.92 * value.x; }
+        else
+        { m_temps[i].x = (1.0f + 0.055f) * pow(value.x, 1.0f / 2.4f) - 0.055f; }
+
+        if (value.y < 0.0031308f)
+        { m_temps[i].y = 12.92 * value.y; }
+        else
+        { m_temps[i].y = (1.0f + 0.055f) * pow(value.y, 1.0f / 2.4f) - 0.055f; }
+
+        if (value.z < 0.0031308f)
+        { m_temps[i].z = 12.92 * value.z; }
+        else
+        { m_temps[i].z = (1.0f + 0.055f) * pow(value.z, 1.0f / 2.4f) - 0.055f; }
     }
 }
 

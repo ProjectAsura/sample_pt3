@@ -4,8 +4,6 @@
 // Copyright(c) Project Asura. All right reserved.
 //-------------------------------------------------------------------------------------------------
 
-#define ENABLE_NEXT_EVENT_ESTIMATION (1)
-
 //-------------------------------------------------------------------------------------------------
 // Inlcudes
 //-------------------------------------------------------------------------------------------------
@@ -15,8 +13,11 @@
 #include <vector>
 #include <algorithm>
 #include <r3d_canvas.h>
-#include <r3d_watcher.h>
 #include <atomic>
+#include <thread>
+#ifdef _OPENMP
+#include <omp.h>
+#endif//_OPENMP
 
 namespace {
 
@@ -26,15 +27,15 @@ namespace {
 const int     g_max_depth = 4;
 const Vector3 g_back_ground (0.0,   0.0,    0.0);
 const Sphere  g_spheres[] = {
-    Sphere(1e5,     Vector3( 1e5 + 1.0,    40.8,          81.6), Vector3(0.25,  0.75,  0.25), ReflectionType::Diffuse,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(-1e5 + 99.0,   40.8,          81.6), Vector3(0.25,  0.25,  0.75), ReflectionType::Diffuse,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(50.0,          40.8,           1e5), Vector3(0.75,  0.75,  0.75), ReflectionType::Diffuse,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(50.0,          40.8,  -1e5 + 170.0), Vector3(0.01,  0.01,  0.01), ReflectionType::Diffuse,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(50.0,           1e5,          81.6), Vector3(0.75,  0.75,  0.75), ReflectionType::Diffuse,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(50.0,   -1e5 + 81.6,          81.6), Vector3(0.75,  0.75,  0.75), ReflectionType::Diffuse,          Vector3(0, 0, 0)),
-    Sphere(16.5,    Vector3(27.0,          16.5,          47.0), Vector3(0.75,  0.25,  0.25), ReflectionType::Diffuse,  Vector3(0, 0, 0)),
-    Sphere(16.5,    Vector3(73.0,          16.5,          78.0), Vector3(0.99,  0.99,  0.99), ReflectionType::Diffuse,       Vector3(0, 0, 0)),
-    Sphere(5.0,     Vector3(50.0,          81.6,          81.6), Vector3(),                   ReflectionType::Diffuse,          Vector3(12, 12, 12))
+    Sphere(1e5,     Vector3( 1e5 + 1.0,    40.8,          81.6), Vector3(0.25,  0.75,  0.25), ReflectionType::Lambert,          Vector3(0, 0, 0)),
+    Sphere(1e5,     Vector3(-1e5 + 99.0,   40.8,          81.6), Vector3(0.25,  0.25,  0.75), ReflectionType::Lambert,          Vector3(0, 0, 0)),
+    Sphere(1e5,     Vector3(50.0,          40.8,           1e5), Vector3(0.75,  0.75,  0.75), ReflectionType::Lambert,          Vector3(0, 0, 0)),
+    Sphere(1e5,     Vector3(50.0,          40.8,  -1e5 + 170.0), Vector3(0.01,  0.01,  0.01), ReflectionType::Lambert,          Vector3(0, 0, 0)),
+    Sphere(1e5,     Vector3(50.0,           1e5,          81.6), Vector3(0.75,  0.75,  0.75), ReflectionType::Lambert,          Vector3(0, 0, 0)),
+    Sphere(1e5,     Vector3(50.0,   -1e5 + 81.6,          81.6), Vector3(0.75,  0.75,  0.75), ReflectionType::Lambert,          Vector3(0, 0, 0)),
+    Sphere(16.5,    Vector3(27.0,          16.5,          47.0), Vector3(0.75,  0.25,  0.25), ReflectionType::PerfectSpecular,  Vector3(0, 0, 0)),
+    Sphere(16.5,    Vector3(73.0,          16.5,          78.0), Vector3(0.99,  0.99,  0.99), ReflectionType::Refraction,       Vector3(0, 0, 0)),
+    Sphere(5.0,     Vector3(50.0,          81.6,          81.6), Vector3(),                   ReflectionType::Lambert,          Vector3(12, 12, 12))
 };
 const int   g_lightId = 8;
 
@@ -71,9 +72,7 @@ Vector3 radiance(const Ray& input_ray, Random* random)
     Vector3 W(1, 1, 1);
     Ray ray(input_ray.pos, input_ray.dir);
 
-    #if ENABLE_NEXT_EVENT_ESTIMATION
     auto direct_light = true;
-    #endif
 
     for(int depth=0; ; depth++)
     {
@@ -98,18 +97,10 @@ Vector3 radiance(const Ray& input_ray, Random* random)
 
         auto p = max(obj.color.x, max(obj.color.y, obj.color.z));
 
-        #if ENABLE_NEXT_EVENT_ESTIMATION
-        {
-            if (direct_light)
-            { L += W * obj.emission; }
+        if (direct_light)
+        { L += W * obj.emission; }
 
-            direct_light = (obj.type != Diffuse);
-        }
-        #else
-        {
-            L += W * obj.emission;
-        }
-        #endif
+        direct_light = (obj.type != Lambert);
 
 
         // 打ち切り深度に達したら終わり.
@@ -125,9 +116,20 @@ Vector3 radiance(const Ray& input_ray, Random* random)
 
         switch (obj.type)
         {
-        case ReflectionType::Diffuse:
+        case Lambert:
             {
-                #if ENABLE_NEXT_EVENT_ESTIMATION
+                // 基底ベクトル.
+                Onb onb;
+                onb.FromW(orienting_normal);
+
+                const auto r1 = F_2PI * random->get_as_float();
+                const auto r2 = random->get_as_float();
+                const auto r2s = sqrt(r2);
+
+                // 出射方向.
+                auto dir = normalize(onb.u * cos(r1) * r2s + onb.v * sin(r1) * r2s + onb.w * sqrt(1.0 - r2));
+
+                // 直接光をサンプル.
                 if (id != g_lightId)
                 {
                     const auto& light = g_spheres[g_lightId];
@@ -166,37 +168,35 @@ Vector3 radiance(const Ray& input_ray, Random* random)
                         if (hit_light)
                         {
                             auto G = (dot0 * dot1) / light_dist2;
-                            auto pdf = 1.0f / (4.0f * F_PI * rad2);
 
-                            L += W * light.emission * (obj.color / F_PI) * G / pdf;
+                            // ライトの確率密度.
+                            auto light_pdf  = 1.0f / (4.0f * F_PI * rad2);
+                            auto light_pdf2 = light_pdf * light_pdf;
+
+                            // BRDFの確率密度.
+                            auto brdf_pdf   = (dot(normal, dir) / F_PI) / light_dist2;
+
+                            // 多重重点的サンプルの重みを求める.
+                            auto mis_weight = light_pdf2 / (light_pdf2 + brdf_pdf * brdf_pdf);
+
+                            L += W * light.emission * (obj.color / F_PI) * G * mis_weight / light_pdf;
                         }
                     }
                 }
-                #endif
-
-                // 基底ベクトル.
-                Onb onb;
-                onb.FromW(orienting_normal);
-
-                const auto r1 = F_2PI * random->get_as_float();
-                const auto r2 = random->get_as_float();
-                const auto r2s = sqrt(r2);
-
-                auto dir = normalize(onb.u * cos(r1) * r2s + onb.v * sin(r1) * r2s + onb.w * sqrt(1.0 - r2));
 
                 ray = Ray(hit_pos, dir);
                 W *= (obj.color / p);
             }
             break;
 
-        case ReflectionType::PerfectSpecular:
+        case PerfectSpecular:
             {
                 ray = Ray(hit_pos, reflect(ray.dir, normal));
                 W *= (obj.color / p);
             }
             break;
 
-        case ReflectionType::Refraction:
+        case Refraction:
             {
                 Ray reflect_ray = Ray(hit_pos, reflect(ray.dir, normal));
                 auto into = dot(normal, orienting_normal) > 0.0f;
@@ -236,6 +236,84 @@ Vector3 radiance(const Ray& input_ray, Random* random)
                 }
             }
             break;
+
+        case Phong:
+            {
+                auto shininess = 50.0f;
+
+                const auto phi = F_2PI * random->get_as_float();
+                const auto cos_theta = pow( 1.0f - random->get_as_float(), 1.0f / (shininess + 1.0f) );
+                const auto sin_theta = sqrt( 1.0f - (cos_theta * cos_theta) );
+                const auto x = cos( phi ) * sin_theta;
+                const auto y = sin( phi ) * sin_theta;
+                const auto z = cos_theta;
+
+                auto w = reflect(ray.dir, orienting_normal);
+                Onb onb;
+                onb.FromW(w);
+
+                auto dir    = normalize(onb.u * x + onb.v * y + onb.w * z);
+                auto cosine = dot(dir, orienting_normal);
+
+                // 直接光をサンプル.
+                if (id != g_lightId)
+                {
+                    const auto& light = g_spheres[g_lightId];
+
+                    const auto r1 = F_2PI * random->get_as_float();
+                    const auto r2 = 1.0f - 2.0f * random->get_as_float();
+                    const auto r3 = sqrt(1.0f - r2 * r2);
+                    const auto light_pos = light.pos + (light.radius + F_HIT_MIN) * normalize(Vector3(r3 * cos(r1), r3 * sin(r1), r2));
+
+                    // ライトベクトル.
+                    auto light_dir   = light_pos - hit_pos;
+
+                    // ライトへの距離の2乗
+                    auto light_dist2 = dot(light_dir, light_dir);
+
+                    // 正規化.
+                    light_dir = normalize(light_dir);
+
+                    // ライトの法線ベクトル.
+                    auto light_normal = normalize(light_pos - light.pos);
+
+                    auto dot0 = abs(dot(orienting_normal, light_dir));
+                    auto dot1 = abs(dot(light_normal,    -light_dir));
+                    auto rad2 = light.radius * light.radius;
+
+                    float  shadow_t;
+                    int    shadow_id;
+                    Ray    shadow_ray(hit_pos, light_dir);
+
+                    // シャドウレイを発射.
+                    auto hit = intersect_scene(shadow_ray, &shadow_t, &shadow_id);
+
+                    // ライトのみと衝突した場合のみ寄与を取る.
+                    {
+                        auto hit_light = hit && (shadow_id == g_lightId);
+                        if (hit_light)
+                        {
+                            auto G = (dot0 * dot1) / light_dist2;
+
+                            // ライトの確率密度.
+                            auto light_pdf  = 1.0f / (4.0f * F_PI * rad2);
+                            auto light_pdf2 = light_pdf * light_pdf;
+
+                            // BRDFの確率密度.
+                            auto brdf_pdf   = ((shininess + 1.0f) / F_2PI) * dot(normal, dir) / light_dist2;
+
+                            // 多重重点的サンプルの重みを求める.
+                            auto mis_weight = light_pdf2 / (light_pdf2 + brdf_pdf * brdf_pdf);
+
+                            L += W * light.emission * (obj.color / F_PI) * G * mis_weight / light_pdf;
+                        }
+                    }
+                }
+
+                ray = Ray(hit_pos, dir);
+                W *= obj.color * cosine * ((shininess + 2.0f) / (shininess + 1.0f));
+            }
+            break;
         }
     }
 
@@ -250,48 +328,69 @@ Vector3 radiance(const Ray& input_ray, Random* random)
 //-------------------------------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-#if 0
-    // レンダーターゲットのサイズ.
-    int width   = 1280;
-    int height  = 720;
-    int samples = 512;
-#else
-    // レンダーターゲットのサイズ.
-    int width   = 320;
-    int height  = 240;
-    int samples = 512;
-#endif
+    #if 0
+        // レンダーターゲットのサイズ.
+        int width   = 1280;
+        int height  = 720;
+        int samples = 512;
+    #else
+        // レンダーターゲットのサイズ.
+        int width   = 320;
+        int height  = 240;
+        int samples = 512;
+    #endif
 
     r3d::Canvas canvas;
-    std::atomic<bool> is_finish = false;
-    std::atomic<bool> request_finish = false;
+    std::atomic<bool> is_finish      = false;   // 終了したかどうか?
+    std::atomic<bool> request_finish = false;   // 終了要求フラグ.
+
+    // 監視スレッド.
     std::thread thd([&]()
     {
+        printf_s("start!\n");
+
         auto counter = 0;
-        auto start = std::chrono::system_clock::now();
-        auto begin = start;
+        auto start   = std::chrono::system_clock::now();
+        auto begin   = start;
+
         while(!request_finish)
         {
             auto curr = std::chrono::system_clock::now();
             auto term = std::chrono::duration_cast<std::chrono::seconds>(curr - begin).count();
             auto sec  = std::chrono::duration_cast<std::chrono::seconds>(curr - start).count();
+
+            // 30秒ごとにキャプチャー.
             if (term >= 30)
             {
                 canvas.write(counter++);
                 begin = curr;
             }
 
+            // 4分33秒経ったら終了(レイトレ合宿5のルール準拠).
             if (sec >= 273)
             {
-                canvas.write(counter++);
                 break;
             }
 
+            // 他に処理を渡すためにちょっと空ける.
             std::this_thread::sleep_for(std::chrono::seconds(1));
         }
 
+        // 最後の1枚は出力する.
+        canvas.write(counter++);
+
         is_finish = true;
+        printf_s("end!\n");
     });
+
+    #ifdef _OPENMP
+        // CPUコア数を取得.
+        int core_count = omp_get_num_procs();
+
+        // 1個は監視スレッド用に開けておく.
+        if (core_count >= 2)
+        { core_count--; }
+    #endif//_OPENMP
 
     // カメラ用意.
     Camera camera(
@@ -306,27 +405,30 @@ int main(int argc, char** argv)
     // レンダーターゲット生成.
     canvas.resize(width, height);
 
+    // 乱数初期化.
     Random random(123456);
+
+    auto inv_w = 1.0 / double(width);
+    auto inv_h = 1.0 / double(height);
+    auto inv_s = 1.0 / double(samples);
 
     for(auto s = 0; s < samples; ++s)
     {
-        printf_s("%.2lf%% complete\r", (double(s)/double(samples) * 100.0));
+        // 完了度を表示.
+        printf_s("%.2lf%% completed.\r", (double(s) * inv_s * 100.0));
 
-        #pragma omp parallel for schedule(dynamic, 1) num_threads(4)
+    #ifdef _OPENMP
+        #pragma omp parallel for schedule(dynamic, 1) num_threads(core_count)
+    #endif//_OPENMP
         for (auto y = 0; y < height; ++y)
         {
-            for (auto x = 0; x < width; ++x)
+            for (auto x = 0; x < width && !is_finish; ++x)
             {   
-                auto idx = y * width + x;
-
-                auto fx = double(x) / double(width)  - 0.5;
-                auto fy = double(y) / double(height) - 0.5;
+                auto fx = double(x) * inv_w - 0.5;
+                auto fy = double(y) * inv_h - 0.5;
 
                 // Let's レイトレ！
-                canvas.add(x, y, radiance(camera.emit(fx, fy), &random) / samples);
-
-                if (is_finish)
-                { break; }
+                canvas.add(x, y, radiance(camera.emit(fx, fy), &random) * inv_s);
             }
 
             if (is_finish)
@@ -340,7 +442,10 @@ int main(int argc, char** argv)
         }
     }
 
+    // 終了フラグを立てる.
     request_finish = true;
+
+    // スレッドの終了を待機.
     thd.join();
 
     return 0;

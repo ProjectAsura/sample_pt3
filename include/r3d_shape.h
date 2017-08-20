@@ -16,9 +16,10 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 enum ReflectionType
 {
-    Diffuse             = 0,    //!< 完全拡散反射.
+    Lambert             = 0,    //!< Lamblert BRDF.
     PerfectSpecular     = 1,    //!< 完全鏡面反射.
     Refraction          = 2,    //!< 屈折.
+    Phong               = 3,    //!< Phong BRDF
 };
 
 

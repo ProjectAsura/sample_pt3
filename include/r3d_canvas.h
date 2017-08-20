@@ -42,7 +42,8 @@ private:
     void tonemap_none();
     void tonemap_reinhard();
     void tonemap_aces();
-    void reveser_gamma();
+    void gamma_correction();
+    void srgb_correction();
 
     void median_filter();
 };
