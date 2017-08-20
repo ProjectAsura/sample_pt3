@@ -111,7 +111,7 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         }
         else
         {
-            p = 1.0;
+            p = 1.0f;
         }
 
         switch (obj.type)
@@ -328,10 +328,10 @@ Vector3 radiance(const Ray& input_ray, Random* random)
 //-------------------------------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-    #if 0
+    #if 1
         // レンダーターゲットのサイズ.
         int width   = 1280;
-        int height  = 720;
+        int height  = 960;
         int samples = 512;
     #else
         // レンダーターゲットのサイズ.

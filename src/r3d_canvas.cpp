@@ -307,7 +307,7 @@ void Canvas::median_filter()
             px[5] = (x == (m_w - 1))                    ? px[4] : m_temps[(y + 0) * m_w + (x + 1)];     // 右
             px[6] = (x == 0 || y == (m_h - 1))          ? px[4] : m_temps[(y + 1) * m_w + (x - 1)];     // 左下
             px[7] = (y == (m_h - 1))                    ? px[4] : m_temps[(y + 1) * m_w + (x + 0)];     // 下
-            px[8] = (x == (m_w - 1) || y == (m_h - 1))  ? px[4] : m_temps[(y + 1) * m_w + (x + 1)];     //　右下
+            px[8] = (x == (m_w - 1) || y == (m_h - 1))  ? px[4] : m_temps[(y + 1) * m_w + (x + 1)];     // 右下
 
             // 輝度値を求める.
             item lum[9];

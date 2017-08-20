@@ -37,7 +37,7 @@ public:
     inline Ray emit(float x, float y) const
     {
         auto d = axis_x * x + axis_y * y + axis_z;
-        auto p = pos + d * near_clip;
+        auto p = pos + (d * near_clip);
         return Ray(p, normalize(d));
     }
 
@@ -46,6 +46,6 @@ private:
     Vector3 axis_x;     //!< 基底ベクトル(X軸)
     Vector3 axis_y;     //!< 基底ベクトル(Y軸)
     Vector3 axis_z;     //!< 基底ベクトル(Z軸).
-    float  near_clip;  //!< ニア平面までの距離.
+    float   near_clip;  //!< ニア平面までの距離.
 
 };
