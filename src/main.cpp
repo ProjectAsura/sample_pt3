@@ -390,6 +390,8 @@ int main(int argc, char** argv)
         // 1個は監視スレッド用に開けておく.
         if (core_count >= 2)
         { core_count--; }
+
+        printf_s("Info : cpu core = %d\n", core_count);
     #endif//_OPENMP
 
     // カメラ用意.
