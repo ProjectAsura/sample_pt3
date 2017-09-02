@@ -23,11 +23,11 @@ public:
     Canvas();
     ~Canvas();
 
-    void            resize(int w, int h);
-    Vector3&        at(int x, int y);
-    const Vector3&  at(int x, int y) const;
-    const Vector3*  pixels() const;
-    void            add(int x, int y, const Vector3& value);
+    void            resize  (int w, int h);
+    Vector3&        at      (int x, int y);
+    const Vector3&  at      (int x, int y) const;
+    const Vector3*  data    () const;
+    void            add     (int x, int y, const Vector3& value);
 
     bool write(const char* filename);
     bool write(int counter);

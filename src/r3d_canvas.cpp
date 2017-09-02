@@ -121,7 +121,7 @@ const Vector3& Canvas::at(int x, int y) const
 //-------------------------------------------------------------------------------------------------
 //      ピクセルを取得します.
 //-------------------------------------------------------------------------------------------------
-const Vector3* Canvas::pixels() const
+const Vector3* Canvas::data() const
 { return m_pixels.data(); }
 
 //-------------------------------------------------------------------------------------------------
@@ -256,17 +256,17 @@ void Canvas::srgb_correction()
         auto value = m_temps[i];
 
         if (value.x < 0.0031308f)
-        { m_temps[i].x = 12.92 * value.x; }
+        { m_temps[i].x = 12.92f * value.x; }
         else
         { m_temps[i].x = (1.0f + 0.055f) * pow(value.x, 1.0f / 2.4f) - 0.055f; }
 
         if (value.y < 0.0031308f)
-        { m_temps[i].y = 12.92 * value.y; }
+        { m_temps[i].y = 12.92f * value.y; }
         else
         { m_temps[i].y = (1.0f + 0.055f) * pow(value.y, 1.0f / 2.4f) - 0.055f; }
 
         if (value.z < 0.0031308f)
-        { m_temps[i].z = 12.92 * value.z; }
+        { m_temps[i].z = 12.92f * value.z; }
         else
         { m_temps[i].z = (1.0f + 0.055f) * pow(value.z, 1.0f / 2.4f) - 0.055f; }
     }

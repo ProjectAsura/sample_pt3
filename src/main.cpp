@@ -15,6 +15,7 @@
 #include <r3d_canvas.h>
 #include <atomic>
 #include <thread>
+#include <cassert>
 #ifdef _OPENMP
 #include <omp.h>
 #endif//_OPENMP
@@ -26,16 +27,28 @@ namespace {
 //-------------------------------------------------------------------------------------------------
 const int     g_max_depth = 4;
 const Vector3 g_back_ground (0.0,   0.0,    0.0);
+
+const Material g_basic_mat[] = {
+    Material(Material::Lambert, Vector3(0.25f, 0.75f, 0.25f)),
+    Material(Material::Lambert, Vector3(0.25f, 0.25f, 0.75f)),
+    Material(Material::Lambert, Vector3(0.75f, 0.75f, 0.75f)),
+    Material(Material::Lambert, Vector3(0.01f, 0.01f, 0.01f)),
+    Material(Material::Mirror,  Vector3(0.75f, 0.25f, 0.25f)),
+    Material(Material::Lambert, Vector3(0.0f, 0.0f, 0.0f), Vector3(12.0f, 12.0f, 12.0f))
+};
+
+const RefractMaterial g_refract_mat(Vector3(0.99f, 0.99f, 0.99f), 1.5f);
+
 const Sphere  g_spheres[] = {
-    Sphere(1e5,     Vector3( 1e5 + 1.0,    40.8,          81.6), Vector3(0.25,  0.75,  0.25), ReflectionType::Lambert,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(-1e5 + 99.0,   40.8,          81.6), Vector3(0.25,  0.25,  0.75), ReflectionType::Lambert,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(50.0,          40.8,           1e5), Vector3(0.75,  0.75,  0.75), ReflectionType::Lambert,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(50.0,          40.8,  -1e5 + 170.0), Vector3(0.01,  0.01,  0.01), ReflectionType::Lambert,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(50.0,           1e5,          81.6), Vector3(0.75,  0.75,  0.75), ReflectionType::Lambert,          Vector3(0, 0, 0)),
-    Sphere(1e5,     Vector3(50.0,   -1e5 + 81.6,          81.6), Vector3(0.75,  0.75,  0.75), ReflectionType::Lambert,          Vector3(0, 0, 0)),
-    Sphere(16.5,    Vector3(27.0,          16.5,          47.0), Vector3(0.75,  0.25,  0.25), ReflectionType::PerfectSpecular,  Vector3(0, 0, 0)),
-    Sphere(16.5,    Vector3(73.0,          16.5,          78.0), Vector3(0.99,  0.99,  0.99), ReflectionType::Refraction,       Vector3(0, 0, 0)),
-    Sphere(5.0,     Vector3(50.0,          81.6,          81.6), Vector3(),                   ReflectionType::Lambert,          Vector3(12, 12, 12))
+    Sphere(1e5,     Vector3( 1e5 + 1.0,    40.8,          81.6), &g_basic_mat[0]),
+    Sphere(1e5,     Vector3(-1e5 + 99.0,   40.8,          81.6), &g_basic_mat[1]),
+    Sphere(1e5,     Vector3(50.0,          40.8,           1e5), &g_basic_mat[2]),
+    Sphere(1e5,     Vector3(50.0,          40.8,  -1e5 + 170.0), &g_basic_mat[3]),
+    Sphere(1e5,     Vector3(50.0,           1e5,          81.6), &g_basic_mat[2]),
+    Sphere(1e5,     Vector3(50.0,   -1e5 + 81.6,          81.6), &g_basic_mat[2]),
+    Sphere(16.5,    Vector3(27.0,          16.5,          47.0), &g_basic_mat[4]),
+    Sphere(16.5,    Vector3(73.0,          16.5,          78.0), &g_refract_mat),
+    Sphere(5.0,     Vector3(50.0,          81.6,          81.6), &g_basic_mat[5])
 };
 const int   g_lightId = 8;
 
@@ -95,12 +108,12 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         // 物体からのレイの入出を考慮した法線ベクトル.
         const auto orienting_normal = (dot(normal, ray.dir) < 0.0) ? normal : -normal;
 
-        auto p = max(obj.color.x, max(obj.color.y, obj.color.z));
+        auto p = max(obj.mat->albedo.x, max(obj.mat->albedo.y, obj.mat->albedo.z));
 
         if (direct_light)
-        { L += W * obj.emission; }
+        { L += W * obj.mat->emissive; }
 
-        direct_light = (obj.type != Lambert);
+        direct_light = (obj.mat->type != Material::Lambert);
 
 
         // 打ち切り深度に達したら終わり.
@@ -114,9 +127,9 @@ Vector3 radiance(const Ray& input_ray, Random* random)
             p = 1.0f;
         }
 
-        switch (obj.type)
+        switch (obj.mat->type)
         {
-        case Lambert:
+        case Material::Lambert:
             {
                 // 基底ベクトル.
                 Onb onb;
@@ -179,30 +192,33 @@ Vector3 radiance(const Ray& input_ray, Random* random)
                             // 多重重点的サンプルの重みを求める.
                             auto mis_weight = light_pdf2 / (light_pdf2 + brdf_pdf * brdf_pdf);
 
-                            L += W * light.emission * (obj.color / F_PI) * G * mis_weight / light_pdf;
+                            L += W * light.mat->emissive * (obj.mat->albedo / F_PI) * G * mis_weight / light_pdf;
                         }
                     }
                 }
 
                 ray = Ray(hit_pos, dir);
-                W *= (obj.color / p);
+                W *= (obj.mat->albedo / p);
             }
             break;
 
-        case PerfectSpecular:
+        case Material::Mirror:
             {
                 ray = Ray(hit_pos, reflect(ray.dir, normal));
-                W *= (obj.color / p);
+                W *= (obj.mat->albedo / p);
             }
             break;
 
-        case Refraction:
+        case Material::Refract:
             {
+                auto mat = reinterpret_cast<const RefractMaterial*>(obj.mat);
+                assert(mat != nullptr);
+
                 Ray reflect_ray = Ray(hit_pos, reflect(ray.dir, normal));
                 auto into = dot(normal, orienting_normal) > 0.0f;
 
                 const auto nc = 1.0f;
-                const auto nt = 1.5f;
+                const auto nt = mat->ior;
                 const auto nnt = (into) ? (nc / nt) : (nt / nc);
                 const auto ddn = dot(ray.dir, orienting_normal);
                 const auto cos2t = 1.0f - nnt * nnt * (1.0f - ddn * ddn);
@@ -210,7 +226,7 @@ Vector3 radiance(const Ray& input_ray, Random* random)
                 if (cos2t <= 0.0f)
                 {
                     ray = reflect_ray;
-                    W *= (obj.color / p);
+                    W *= (obj.mat->albedo / p);
                     break;
                 }
 
@@ -227,19 +243,21 @@ Vector3 radiance(const Ray& input_ray, Random* random)
                 if (random->get_as_float() < prob)
                 {
                     ray = reflect_ray;
-                    W *= (obj.color * Re / prob) / p; 
+                    W *= (obj.mat->albedo * Re / prob) / p; 
                 }
                 else
                 {
                     ray = Ray(hit_pos, dir);
-                    W *= (obj.color * Tr / (1.0f - prob)) / p;
+                    W *= (obj.mat->albedo * Tr / (1.0f - prob)) / p;
                 }
             }
             break;
 
-        case Phong:
+        case Material::Phong:
             {
-                auto shininess = 50.0f;
+                auto mat = reinterpret_cast<const PhongMaterial*>(obj.mat);
+                assert(mat != nullptr);
+                auto shininess = mat->shininess;
 
                 const auto phi = F_2PI * random->get_as_float();
                 const auto cos_theta = pow( 1.0f - random->get_as_float(), 1.0f / (shininess + 1.0f) );
@@ -305,13 +323,13 @@ Vector3 radiance(const Ray& input_ray, Random* random)
                             // 多重重点的サンプルの重みを求める.
                             auto mis_weight = light_pdf2 / (light_pdf2 + brdf_pdf * brdf_pdf);
 
-                            L += W * light.emission * (obj.color / F_PI) * G * mis_weight / light_pdf;
+                            L += W * light.mat->emissive * (obj.mat->albedo / F_PI) * G * mis_weight / light_pdf;
                         }
                     }
                 }
 
                 ray = Ray(hit_pos, dir);
-                W *= obj.color * cosine * ((shininess + 2.0f) / (shininess + 1.0f));
+                W *= obj.mat->albedo * cosine * ((shininess + 2.0f) / (shininess + 1.0f));
             }
             break;
         }
@@ -440,6 +458,7 @@ int main(int argc, char** argv)
         if (is_finish)
         {
             printf_s("rendering imcompleted...\n");
+            printf_s("%.2lf%% complted.\n", (double(s) * inv_s * 100.0));
             break;
         }
     }

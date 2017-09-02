@@ -9,18 +9,7 @@
 // Includes
 //-------------------------------------------------------------------------------------------------
 #include <r3d_math.h>
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-// ReflectionType enum
-///////////////////////////////////////////////////////////////////////////////////////////////////
-enum ReflectionType
-{
-    Lambert             = 0,    //!< Lamblert BRDF.
-    PerfectSpecular     = 1,    //!< 完全鏡面反射.
-    Refraction          = 2,    //!< 屈折.
-    Phong               = 3,    //!< Phong BRDF
-};
+#include <r3d_material.h>
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -30,23 +19,17 @@ struct Sphere
 {
     float           radius;     //!< 半径です.
     Vector3         pos;        //!< 位置座標です.
-    Vector3         color;      //!< 色です.
-    ReflectionType  type;       //!< 反射タイプです.
-    Vector3         emission;   //!< 自己照明成分.
+    const Material* mat;        //!< マテリアル.
 
     Sphere
     (
         float           r,
         const Vector3&  p,
-        const Vector3&  c,
-        ReflectionType  t,
-        const Vector3&  e
+        const Material* m
     )
     : radius    (r)
     , pos       (p)
-    , color     (c)
-    , type      (t)
-    , emission  (e)
+    , mat       (m)    
     { /* DO_NOTHING*/ }
 
     inline float intersect(const Ray& ray) const
