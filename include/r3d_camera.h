@@ -47,5 +47,4 @@ private:
     Vector3 axis_y;     //!< 基底ベクトル(Y軸)
     Vector3 axis_z;     //!< 基底ベクトル(Z軸).
     float   near_clip;  //!< ニア平面までの距離.
-
 };

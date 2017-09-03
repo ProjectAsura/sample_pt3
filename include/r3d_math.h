@@ -42,6 +42,12 @@ inline float clamp(float value, float mini, float maxi)
 inline float saturate(float value)
 { return clamp(value, 0, 1); }
 
+inline bool is_nan(float value)
+{ return value != value; }
+
+inline bool is_inf(float value)
+{ return std::isinf(value); }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Vector2 structure
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -172,8 +178,11 @@ struct Ray
 class Random
 {
 public:
-    Random(uint32_t seed)
+    Random()
     { set_seed( 123456789 ); }
+
+    Random(uint32_t seed)
+    { set_seed(seed); }
 
     inline void set_seed(uint32_t seed)
     {
@@ -231,6 +240,18 @@ inline Vector3 saturate(const Vector3& value)
         saturate(value.z)
     );
 }
+
+inline bool is_nan(const Vector2& value)
+{ return is_nan(value.x) || is_nan(value.y); }
+
+inline bool is_nan(const Vector3& value)
+{ return is_nan(value.x) || is_nan(value.y) || is_nan(value.z); }
+
+inline bool is_inf(const Vector2& value)
+{ return is_inf(value.x) || is_inf(value.y); }
+
+inline bool is_inf(const Vector3& value)
+{ return is_inf(value.x) || is_inf(value.y) || is_inf(value.z); }
 
 inline float dot(const Vector2& lhs, const Vector2& rhs)
 { return lhs.x * rhs.x + lhs.y * rhs.y; }
