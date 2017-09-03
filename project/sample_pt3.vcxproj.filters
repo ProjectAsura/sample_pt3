@@ -21,6 +21,9 @@
     <ClCompile Include="..\src\r3d_canvas.cpp">
       <Filter>ソース ファイル</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\r3d_shape.cpp">
+      <Filter>ソース ファイル</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\r3d_camera.h">

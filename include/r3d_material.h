@@ -194,7 +194,7 @@ public:
 
         // 物体からのレイの入出を考慮した法線ベクトル.
         auto normal = (dot(arg.normal, arg.input) < 0.0f) ? arg.normal : -arg.normal;
-        auto into = dot(arg.normal, normal) > 0.0f;
+        auto into   = dot(arg.normal, normal) > 0.0f;
 
         const auto nc = 1.0f;
         const auto nt = m_ior;

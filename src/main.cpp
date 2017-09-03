@@ -40,16 +40,16 @@ const Material* g_basic_mat[] = {
     Refract::create(Vector3(0.99f, 0.99f, 0.99f), 1.5f)
 };
 
-const Sphere  g_spheres[] = {
-    Sphere(1e5,     Vector3( 1e5 + 1.0,    40.8,          81.6), g_basic_mat[0]),
-    Sphere(1e5,     Vector3(-1e5 + 99.0,   40.8,          81.6), g_basic_mat[1]),
-    Sphere(1e5,     Vector3(50.0,          40.8,           1e5), g_basic_mat[2]),
-    Sphere(1e5,     Vector3(50.0,          40.8,  -1e5 + 170.0), g_basic_mat[3]),
-    Sphere(1e5,     Vector3(50.0,           1e5,          81.6), g_basic_mat[2]),
-    Sphere(1e5,     Vector3(50.0,   -1e5 + 81.6,          81.6), g_basic_mat[2]),
-    Sphere(16.5,    Vector3(27.0,          16.5,          47.0), g_basic_mat[4]),
-    Sphere(16.5,    Vector3(73.0,          16.5,          78.0), g_basic_mat[6]),
-    Sphere(5.0,     Vector3(50.0,          81.6,          81.6), g_basic_mat[5])
+const Shape*  g_spheres[] = {
+    Sphere::create(1e5,     Vector3( 1e5 + 1.0,    40.8,          81.6), g_basic_mat[0]),
+    Sphere::create(1e5,     Vector3(-1e5 + 99.0,   40.8,          81.6), g_basic_mat[1]),
+    Sphere::create(1e5,     Vector3(50.0,          40.8,           1e5), g_basic_mat[2]),
+    Sphere::create(1e5,     Vector3(50.0,          40.8,  -1e5 + 170.0), g_basic_mat[3]),
+    Sphere::create(1e5,     Vector3(50.0,           1e5,          81.6), g_basic_mat[2]),
+    Sphere::create(1e5,     Vector3(50.0,   -1e5 + 81.6,          81.6), g_basic_mat[2]),
+    Sphere::create(16.5,    Vector3(27.0,          16.5,          47.0), g_basic_mat[4]),
+    Sphere::create(16.5,    Vector3(73.0,          16.5,          78.0), g_basic_mat[6]),
+    Sphere::create(5.0,     Vector3(50.0,          81.6,          81.6), g_basic_mat[5])
 };
 const int   g_lightId = 8;
 
@@ -69,7 +69,21 @@ inline bool intersect_scene(const Ray& ray, HitRecord& record)
 
     for (auto i = 0; i < n; ++i)
     {
-        hit |= g_spheres[i].hit(ray, record);
+        hit |= g_spheres[i]->hit(ray, record);
+    }
+
+    return hit;
+}
+
+inline bool intersect_scene(const Ray& ray, ShadowRecord& record)
+{
+    auto n = static_cast<int>(sizeof(g_spheres) / sizeof(g_spheres[0]));
+
+    bool hit = false;
+
+    for (auto i = 0; i < n; ++i)
+    {
+        hit |= g_spheres[i]->shadow_hit(ray, record);
     }
 
     return hit;
@@ -103,9 +117,6 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         // 法線ベクトル.
         const auto normal = record.nrm;
 
-        // 物体からのレイの入出を考慮した法線ベクトル.
-        const auto orienting_normal = (dot(normal, ray.dir) < 0.0) ? normal : -normal;
-
         auto p = record.mat->threshold();
 
         if (direct_light)
@@ -134,17 +145,14 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         auto w = record.mat->shade(arg);
 
         // 直接光をサンプル.
-        if (obj != &g_spheres[g_lightId] && !record.mat->is_delta())
+        if (obj != g_spheres[g_lightId] && !record.mat->is_delta())
         {
-            const auto& light = g_spheres[g_lightId];
-
-            const auto r1 = F_2PI * random->get_as_float();
-            const auto r2 = 1.0f - 2.0f * random->get_as_float();
-            const auto r3 = sqrt(1.0f - r2 * r2);
-            const auto light_pos = light.pos + (light.radius + F_HIT_MIN) * normalize(Vector3(r3 * cos(r1), r3 * sin(r1), r2));
+            Vector3 light_pos;
+            Vector3 light_nrm;
+            g_spheres[g_lightId]->sample(*random, light_pos, light_nrm);
 
             // ライトベクトル.
-            auto light_dir   = light_pos - hit_pos;
+            auto light_dir = light_pos - hit_pos;
 
             // ライトへの距離の2乗
             auto light_dist2 = dot(light_dir, light_dir);
@@ -152,38 +160,36 @@ Vector3 radiance(const Ray& input_ray, Random* random)
             // 正規化.
             light_dir = normalize(light_dir);
 
-            // ライトの法線ベクトル.
-            auto light_normal = normalize(light_pos - light.pos);
-
-            auto dot0 = abs(dot(orienting_normal, light_dir));
-            auto dot1 = abs(dot(light_normal,    -light_dir));
-            auto rad2 = light.radius * light.radius;
-
-            float  shadow_t;
-            int    shadow_id;
+            ShadowRecord shadow_rec;
             Ray    shadow_ray(hit_pos, light_dir);
 
             // シャドウレイを発射.
-            auto hit = intersect_scene(shadow_ray, &shadow_t, &shadow_id);
+            auto hit = intersect_scene(shadow_ray, shadow_rec);
 
             // ライトのみと衝突した場合のみ寄与を取る.
             {
-                auto hit_light = hit && (shadow_id == g_lightId);
+                auto hit_light = hit && (shadow_rec.shape == g_spheres[g_lightId]);
                 if (hit_light)
                 {
+                    // 物体からのレイの入出を考慮した法線ベクトル.
+                    const auto orienting_normal = (dot(normal, ray.dir) < 0.0) ? normal : -normal;
+
+                    auto dot0 = abs(dot(orienting_normal, light_dir));
+                    auto dot1 = abs(dot(light_nrm,       -light_dir));
+
                     auto G = (dot0 * dot1) / light_dist2;
 
                     // ライトの確率密度.
-                    auto light_pdf  = 1.0f / (4.0f * F_PI * rad2);
-                    auto light_pdf2 = light_pdf * light_pdf;
+                    auto light_pdf2 = shadow_rec.pdf * shadow_rec.pdf;
 
                     // BRDFの確率密度.
-                    auto brdf_pdf = arg.pdf / light_dist2;
+                    auto brdf_pdf  = (arg.pdf / light_dist2);
+                    auto brdf_pdf2 = brdf_pdf * brdf_pdf;
 
                     // 多重重点的サンプルの重みを求める.
-                    auto mis_weight = light_pdf2 / (light_pdf2 + brdf_pdf * brdf_pdf);
+                    auto mis_weight = light_pdf2 / (light_pdf2 + brdf_pdf2);
 
-                    L += W * light.mat->emissive() * (w / F_PI) * G * mis_weight / light_pdf;
+                    L += W * shadow_rec.mat->emissive() * (w / F_PI) * G * mis_weight / shadow_rec.pdf;
                 }
             }
         }
@@ -251,8 +257,9 @@ int main(int argc, char** argv)
                 begin = curr;
             }
 
-            // 4分33秒経ったら終了(レイトレ合宿5のルール準拠).
-            if (sec >= 273)
+            // 4分32秒経ったら終了(レイトレ合宿5のルール準拠).
+            // 終了処理等の時間があるので，1秒早めに終わらせる.
+            if (sec >= 272)
             {
                 break;
             }
@@ -342,6 +349,12 @@ int main(int argc, char** argv)
 
     // スレッドの終了を待機.
     thd.join();
+
+    for(auto& itr : g_spheres)
+    {
+        delete itr;
+        itr = nullptr;
+    }
 
     // 解放処理.
     for(auto& itr : g_basic_mat)

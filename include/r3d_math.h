@@ -56,8 +56,8 @@ inline bool is_zero(float value)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 struct Vector2
 {
-    float x = 0.0f;
-    float y = 0.0f;
+    float x;
+    float y;
 
     Vector2()
     { /* DO_NOTHING */ }
@@ -109,9 +109,9 @@ struct Vector2
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 struct Vector3
 {
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
+    float x;
+    float y;
+    float z;
 
     Vector3()
     { /* DO_NOTHING */ }
@@ -215,6 +215,128 @@ private:
     uint32_t d;
 };
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Matrix structure
+///////////////////////////////////////////////////////////////////////////////////////////////////
+struct Matrix
+{
+    float _11, _12, _13, _14;
+    float _21, _22, _23, _24;
+    float _31, _32, _33, _34;
+    float _41, _42, _43, _44;
+
+    Matrix()
+    { /* DO_NOTHING */ }
+
+    Matrix(
+        float m11, float m12, float m13, float m14,
+        float m21, float m22, float m23, float m24,
+        float m31, float m32, float m33, float m34,
+        float m41, float m42, float m43, float m44)
+    : _11(m11), _12(m12), _13(m13), _14(m14)
+    , _21(m21), _22(m22), _23(m23), _24(m24)
+    , _31(m31), _32(m32), _33(m33), _34(m34)
+    , _41(m41), _42(m42), _43(m43), _44(m44)
+    { /* DO_NOTHING */ }
+
+    inline Matrix operator * (const Matrix& value) const
+    {
+        return Matrix(
+            ( _11 * value._11 ) + ( _12 * value._21 ) + ( _13 * value._31 ) + ( _14 * value._41 ),
+            ( _11 * value._12 ) + ( _12 * value._22 ) + ( _13 * value._32 ) + ( _14 * value._42 ),
+            ( _11 * value._13 ) + ( _12 * value._23 ) + ( _13 * value._33 ) + ( _14 * value._43 ),
+            ( _11 * value._14 ) + ( _12 * value._24 ) + ( _13 * value._34 ) + ( _14 * value._44 ),
+
+            ( _21 * value._11 ) + ( _22 * value._21 ) + ( _23 * value._31 ) + ( _24 * value._41 ),
+            ( _21 * value._12 ) + ( _22 * value._22 ) + ( _23 * value._32 ) + ( _24 * value._42 ),
+            ( _21 * value._13 ) + ( _22 * value._23 ) + ( _23 * value._33 ) + ( _24 * value._43 ),
+            ( _21 * value._14 ) + ( _22 * value._24 ) + ( _23 * value._34 ) + ( _24 * value._44 ),
+
+            ( _31 * value._11 ) + ( _32 * value._21 ) + ( _33 * value._31 ) + ( _34 * value._41 ),
+            ( _31 * value._12 ) + ( _32 * value._22 ) + ( _33 * value._32 ) + ( _34 * value._42 ),
+            ( _31 * value._13 ) + ( _32 * value._23 ) + ( _33 * value._33 ) + ( _34 * value._43 ),
+            ( _31 * value._14 ) + ( _32 * value._24 ) + ( _33 * value._34 ) + ( _34 * value._44 ),
+
+            ( _41 * value._11 ) + ( _42 * value._21 ) + ( _43 * value._31 ) + ( _44 * value._41 ),
+            ( _41 * value._12 ) + ( _42 * value._22 ) + ( _43 * value._32 ) + ( _44 * value._42 ),
+            ( _41 * value._13 ) + ( _42 * value._23 ) + ( _43 * value._33 ) + ( _44 * value._43 ),
+            ( _41 * value._14 ) + ( _42 * value._24 ) + ( _43 * value._34 ) + ( _44 * value._44 )
+        );
+    }
+
+    inline Matrix operator * (float value) const
+    {
+        return Matrix(
+            _11 * value, _12 * value, _13 * value, _14 * value,
+            _21 * value, _22 * value, _23 * value, _24 * value,
+            _31 * value, _32 * value, _33 * value, _34 * value,
+            _41 * value, _42 * value, _43 * value, _44 * value);
+    }
+
+    static Matrix create_identiy()
+    {
+        return Matrix(
+            1.0f,   0.0f,   0.0f,   0.0f,
+            0.0f,   1.0f,   0.0f,   0.0f,
+            0.0f,   0.0f,   1.0f,   0.0f,
+            0.0f,   0.0f,   0.0f,   1.0f);
+    }
+
+    static Matrix create_scale(float x, float y, float z)
+    {
+        return Matrix(
+            x,      0.0f,   0.0f,   0.0f,
+            0.0f,   y,      0.0f,   0.0f,
+            0.0f,   0.0f,   z,      0.0f,
+            0.0f,   0.0f,   0.0f,   1.0f);
+    }
+
+    static Matrix create_translation(float x, float y, float z)
+    {
+        return Matrix(
+            1.0f,   0.0f,   0.0f,   0.0f,
+            0.0f,   1.0f,   0.0f,   0.0f,
+            0.0f,   0.0f,   1.0f,   0.0f,
+            x,      y,      z,      1.0f);
+    }
+
+    static Matrix create_rotate_x(float rad)
+    {
+        auto cosRad = cosf(rad);
+        auto sinRad = sinf(rad);
+        return Matrix(
+            1.0f,   0.0f,   0.0f,   0.0f,
+            0.0f,   cosRad, sinRad, 0.0f,
+            0.0f,  -sinRad, cosRad, 0.0f,
+            0.0f,   0.0f,   0.0f,   1.0f );
+    }
+
+    static Matrix create_rotate_y(float rad)
+    {
+        auto cosRad = cosf(rad);
+        auto sinRad = sinf(rad);
+
+        return Matrix(
+            cosRad, 0.0f,  -sinRad, 0.0f,
+            0.0f,   1.0f,   0.0f,   0.0f,
+            sinRad, 0.0f,   cosRad, 0.0f,
+            0.0f,   0.0f,   0.0f,   1.0f );
+    }
+
+    static Matrix create_rotate_z(float rad)
+    {
+        auto cosRad = cosf(rad);
+        auto sinRad = sinf(rad);
+
+        return Matrix( 
+            cosRad, sinRad, 0.0f, 0.0f,
+           -sinRad, cosRad, 0.0f, 0.0f,
+            0.0f,   0.0f,   1.0f, 0.0f,
+            0.0f,   0.0f,   0.0f, 1.0f );
+    }
+};
+
+
 inline Vector2 operator * (float lhs, const Vector2& rhs)
 { return Vector2(lhs * rhs.x, lhs * rhs.y); }
 
@@ -287,6 +409,90 @@ inline Vector3 cross(const Vector3& lhs, const Vector3& rhs)
         (lhs.z * rhs.x) - (lhs.x * rhs.z),
         (lhs.x * rhs.y) - (lhs.y * rhs.x));
 }
+
+inline Matrix transpose(const Matrix& value)
+{
+    return Matrix(
+        value._11, value._21, value._31, value._41,
+        value._12, value._22, value._32, value._42,
+        value._13, value._23, value._33, value._43,
+        value._14, value._24, value._34, value._44);
+}
+
+inline float determinant(const Matrix& value)
+{
+    return
+        value._11 * value._22 * value._33 * value._44 + value._11 * value._23 * value._34 * value._42 +
+        value._11 * value._24 * value._32 * value._43 + value._12 * value._21 * value._34 * value._43 +
+        value._12 * value._23 * value._31 * value._44 + value._12 * value._24 * value._33 * value._41 +
+        value._13 * value._21 * value._32 * value._44 + value._13 * value._22 * value._34 * value._41 +
+        value._13 * value._24 * value._31 * value._42 + value._14 * value._21 * value._33 * value._42 +
+        value._14 * value._22 * value._31 * value._43 + value._14 * value._23 * value._32 * value._41 -
+        value._11 * value._22 * value._34 * value._43 - value._11 * value._23 * value._32 * value._44 -
+        value._11 * value._24 * value._33 * value._42 - value._12 * value._21 * value._33 * value._44 -
+        value._12 * value._23 * value._34 * value._41 - value._12 * value._24 * value._31 * value._43 -
+        value._13 * value._21 * value._34 * value._42 - value._13 * value._22 * value._31 * value._44 -
+        value._13 * value._24 * value._32 * value._41 - value._14 * value._21 * value._32 * value._43 -
+        value._14 * value._22 * value._33 * value._41 - value._14 * value._23 * value._31 * value._42;
+}
+
+inline Matrix invert(const Matrix& value)
+{
+    auto det = determinant(value);
+
+    auto m11 = value._22*value._33*value._44 + value._23*value._34*value._42 + value._24*value._32*value._43 - value._22*value._34*value._43 - value._23*value._32*value._44 - value._24*value._33*value._42;
+    auto m12 = value._12*value._34*value._43 + value._13*value._32*value._44 + value._14*value._33*value._42 - value._12*value._33*value._44 - value._13*value._34*value._42 - value._14*value._32*value._43;
+    auto m13 = value._12*value._23*value._44 + value._13*value._24*value._42 + value._14*value._22*value._43 - value._12*value._24*value._43 - value._13*value._22*value._44 - value._14*value._23*value._42;
+    auto m14 = value._12*value._24*value._33 + value._13*value._22*value._34 + value._14*value._23*value._32 - value._12*value._23*value._34 - value._13*value._24*value._32 - value._14*value._22*value._33;
+
+    auto m21 = value._21*value._34*value._43 + value._23*value._31*value._44 + value._24*value._33*value._41 - value._21*value._33*value._44 - value._23*value._34*value._41 - value._24*value._31*value._43;
+    auto m22 = value._11*value._33*value._44 + value._13*value._34*value._41 + value._14*value._31*value._43 - value._11*value._34*value._43 - value._13*value._31*value._44 - value._14*value._33*value._41;
+    auto m23 = value._11*value._24*value._43 + value._13*value._21*value._44 + value._14*value._23*value._41 - value._11*value._23*value._44 - value._13*value._24*value._41 - value._14*value._21*value._43;
+    auto m24 = value._11*value._23*value._34 + value._13*value._24*value._31 + value._14*value._21*value._33 - value._11*value._24*value._33 - value._13*value._21*value._34 - value._14*value._23*value._31;
+
+    auto m31 = value._21*value._32*value._44 + value._22*value._34*value._41 + value._24*value._31*value._42 - value._21*value._34*value._42 - value._22*value._31*value._44 - value._24*value._32*value._41;
+    auto m32 = value._11*value._34*value._42 + value._12*value._31*value._44 + value._14*value._32*value._41 - value._11*value._32*value._44 - value._12*value._34*value._41 - value._14*value._31*value._42;
+    auto m33 = value._11*value._22*value._44 + value._12*value._24*value._41 + value._14*value._21*value._42 - value._11*value._24*value._42 - value._12*value._21*value._44 - value._14*value._22*value._41;
+    auto m34 = value._11*value._24*value._32 + value._12*value._21*value._34 + value._14*value._22*value._31 - value._11*value._22*value._34 - value._12*value._24*value._31 - value._14*value._21*value._32;
+
+    auto m41 = value._21*value._33*value._42 + value._22*value._31*value._43 + value._23*value._32*value._41 - value._21*value._32*value._43 - value._22*value._33*value._41 - value._23*value._31*value._42;
+    auto m42 = value._11*value._32*value._43 + value._12*value._33*value._41 + value._13*value._31*value._42 - value._11*value._33*value._42 - value._12*value._31*value._43 - value._13*value._32*value._41;
+    auto m43 = value._11*value._23*value._42 + value._12*value._21*value._43 + value._13*value._22*value._41 - value._11*value._22*value._43 - value._12*value._23*value._41 - value._13*value._21*value._42;
+    auto m44 = value._11*value._22*value._33 + value._12*value._23*value._31 + value._13*value._21*value._32 - value._11*value._23*value._32 - value._12*value._21*value._33 - value._13*value._22*value._31;
+
+    return Matrix(
+        m11 / det, m12 / det, m13 / det, m14 / det,
+        m21 / det, m22 / det, m23 / det, m24 / det,
+        m31 / det, m32 / det, m33 / det, m34 / det,
+        m41 / det, m42 / det, m43 / det, m44 / det );
+}
+
+inline Vector3 mul(const Vector3& lhs, const Matrix& rhs)
+{
+    return Vector3(
+        (lhs.x * rhs._11) + (lhs.y * rhs._21) + (lhs.z * rhs._31) + rhs._41,
+        (lhs.x * rhs._12) + (lhs.y * rhs._22) + (lhs.z * rhs._32) + rhs._42,
+        (lhs.x * rhs._13) + (lhs.y * rhs._23) + (lhs.z * rhs._33) + rhs._43 );
+}
+
+inline Vector3 mul_normal(const Vector3& lhs, const Matrix& rhs)
+{
+    return Vector3(
+        (lhs.x * rhs._11) + (lhs.y * rhs._21) + (lhs.z * rhs._31),
+        (lhs.x * rhs._12) + (lhs.y * rhs._22) + (lhs.z * rhs._32),
+        (lhs.x * rhs._13) + (lhs.y * rhs._23) + (lhs.z * rhs._33) );
+}
+
+inline Vector3 mul_coord(const Vector3& lhs, const Matrix& rhs)
+{
+    auto x = (lhs.x * rhs._11) + (lhs.y * rhs._21) + (lhs.z * rhs._31) + rhs._41;
+    auto y = (lhs.x * rhs._12) + (lhs.y * rhs._22) + (lhs.z * rhs._32) + rhs._42;
+    auto z = (lhs.x * rhs._13) + (lhs.y * rhs._23) + (lhs.z * rhs._33) + rhs._43;
+    auto w = (lhs.x * rhs._14) + (lhs.y * rhs._24) + (lhs.z * rhs._34) + rhs._44;
+
+    return Vector3(x/w, y/w, z/w);
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Onb structure
