@@ -10,6 +10,7 @@
 #include <r3d_math.h>
 #include <r3d_camera.h>
 #include <r3d_shape.h>
+#include <r3d_material.h>
 #include <vector>
 #include <algorithm>
 #include <r3d_canvas.h>
@@ -107,15 +108,12 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         // 物体からのレイの入出を考慮した法線ベクトル.
         const auto orienting_normal = (dot(normal, ray.dir) < 0.0) ? normal : -normal;
 
-        //auto p = max(obj.mat->albedo.x, max(obj.mat->albedo.y, obj.mat->albedo.z));
         auto p = obj.mat->threshold();
 
         if (direct_light)
         { L += W * obj.mat->emissive(); }
 
-        //direct_light = (obj.mat->type != Material::Lambert);
         direct_light = obj.mat->is_delta();
-
 
         // 打ち切り深度に達したら終わり.
         if(depth > g_max_depth)
@@ -133,8 +131,8 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         arg.normal = normal;
         arg.random = *random;
 
+        // マテリアルの評価.
         auto w = obj.mat->shade(arg);
-        assert(!is_nan(w));
 
         // 直接光をサンプル.
         if (id != g_lightId && !obj.mat->is_delta())
@@ -181,261 +179,27 @@ Vector3 radiance(const Ray& input_ray, Random* random)
                     auto light_pdf2 = light_pdf * light_pdf;
 
                     // BRDFの確率密度.
-                    //auto brdf_pdf   = (dot(normal, dir) / F_PI) / light_dist2;
                     auto brdf_pdf = arg.pdf / light_dist2;
 
                     // 多重重点的サンプルの重みを求める.
                     auto mis_weight = light_pdf2 / (light_pdf2 + brdf_pdf * brdf_pdf);
 
-                    //L += W * light.mat->emissive * (obj.mat->albedo / F_PI) * G * mis_weight / light_pdf;
-                    auto l = W * light.mat->emissive() * (w / F_PI) * G * mis_weight / light_pdf;
-                    //printf_s("l (%f, %f, %f)\n", l.x, l.y, l.z);
-                    assert(!is_nan(l));
-                    L += l;
+                    L += W * light.mat->emissive() * (w / F_PI) * G * mis_weight / light_pdf;
                 }
             }
         }
 
+        // レイを更新.
         ray = Ray(hit_pos, arg.output);
+
+        // 重み更新.
         W *= (w / p);
 
-#if 0
-
-        switch (obj.mat->type())
-        {
-        case Material::Lambert:
-            {
-                //// 基底ベクトル.
-                //Onb onb;
-                //onb.FromW(orienting_normal);
-
-                //const auto r1 = F_2PI * random->get_as_float();
-                //const auto r2 = random->get_as_float();
-                //const auto r2s = sqrt(r2);
-
-                // 出射方向.
-                //auto dir = normalize(onb.u * cos(r1) * r2s + onb.v * sin(r1) * r2s + onb.w * sqrt(1.0 - r2));
-                auto w = obj.mat->shade(arg);
-                assert(!is_nan(w));
-
-                // 直接光をサンプル.
-                if (id != g_lightId)
-                {
-                    const auto& light = g_spheres[g_lightId];
-
-                    const auto r1 = F_2PI * random->get_as_float();
-                    const auto r2 = 1.0f - 2.0f * random->get_as_float();
-                    const auto r3 = sqrt(1.0f - r2 * r2);
-                    const auto light_pos = light.pos + (light.radius + F_HIT_MIN) * normalize(Vector3(r3 * cos(r1), r3 * sin(r1), r2));
-
-                    // ライトベクトル.
-                    auto light_dir   = light_pos - hit_pos;
-
-                    // ライトへの距離の2乗
-                    auto light_dist2 = dot(light_dir, light_dir);
-
-                    // 正規化.
-                    light_dir = normalize(light_dir);
-
-                    // ライトの法線ベクトル.
-                    auto light_normal = normalize(light_pos - light.pos);
-
-                    auto dot0 = abs(dot(orienting_normal, light_dir));
-                    auto dot1 = abs(dot(light_normal,    -light_dir));
-                    auto rad2 = light.radius * light.radius;
-
-                    float  shadow_t;
-                    int    shadow_id;
-                    Ray    shadow_ray(hit_pos, light_dir);
-
-                    // シャドウレイを発射.
-                    auto hit = intersect_scene(shadow_ray, &shadow_t, &shadow_id);
-
-                    // ライトのみと衝突した場合のみ寄与を取る.
-                    {
-                        auto hit_light = hit && (shadow_id == g_lightId);
-                        if (hit_light)
-                        {
-                            auto G = (dot0 * dot1) / light_dist2;
-
-                            // ライトの確率密度.
-                            auto light_pdf  = 1.0f / (4.0f * F_PI * rad2);
-                            auto light_pdf2 = light_pdf * light_pdf;
-
-                            // BRDFの確率密度.
-                            //auto brdf_pdf   = (dot(normal, dir) / F_PI) / light_dist2;
-                            auto brdf_pdf = arg.pdf / light_dist2;
-
-                            // 多重重点的サンプルの重みを求める.
-                            auto mis_weight = light_pdf2 / (light_pdf2 + brdf_pdf * brdf_pdf);
-
-                            //L += W * light.mat->emissive * (obj.mat->albedo / F_PI) * G * mis_weight / light_pdf;
-                            auto l = W * light.mat->emissive() * (w / F_PI) * G * mis_weight / light_pdf;
-                            //printf_s("l (%f, %f, %f)\n", l.x, l.y, l.z);
-                            assert(!is_nan(l));
-                            L += l;
-                        }
-                    }
-                }
-
-                //ray = Ray(hit_pos, dir);
-                //W *= (obj.mat->albedo / p);
-                ray = Ray(hit_pos, arg.output);
-                W *= (w / p);
-                assert(!is_inf(W));
-            }
-            break;
-
-        case Material::Mirror:
-            {
-                //ray = Ray(hit_pos, reflect(ray.dir, normal));
-                //W *= (obj.mat->albedo / p);
-                auto w = obj.mat->shade(arg);
-                assert(!is_nan(w));
-                ray = Ray(hit_pos, arg.output);
-                W *= (w / p);
-                assert(!is_inf(W));
-            }
-            break;
-
-        case Material::Refract:
-            {
-                //Ray reflect_ray = Ray(hit_pos, reflect(ray.dir, normal));
-                //auto into = dot(normal, orienting_normal) > 0.0f;
-
-                //const auto nc = 1.0f;
-                //const auto nt = obj.mat->ior;
-                //const auto nnt = (into) ? (nc / nt) : (nt / nc);
-                //const auto ddn = dot(ray.dir, orienting_normal);
-                //const auto cos2t = 1.0f - nnt * nnt * (1.0f - ddn * ddn);
-
-                //if (cos2t <= 0.0f)
-                //{
-                //    ray = reflect_ray;
-                //    W *= (obj.mat->albedo / p);
-                //    break;
-                //}
-
-                //auto dir = normalize(ray.dir * nnt - normal * ((into) ? 1.0f : -1.0f) * (ddn * nnt + sqrt(cos2t)));
-
-                //const auto a = nt - nc;
-                //const auto b = nt + nc;
-                //const auto R0 = (a * a) / (b * b);
-                //const auto c = 1.0f - ((into) ? -ddn : dot(dir, normal));
-                //const auto Re = R0 + (1.0f - R0) * pow(c, 5.0f);
-                //const auto Tr = 1.0f - Re;
-                //const auto prob = 0.25f + 0.5f * Re;
-
-                //if (random->get_as_float() < prob)
-                //{
-                //    ray = reflect_ray;
-                //    W *= (obj.mat->albedo * Re / prob) / p; 
-                //}
-                //else
-                //{
-                //    ray = Ray(hit_pos, dir);
-                //    W *= (obj.mat->albedo * Tr / (1.0f - prob)) / p;
-                //}
-                auto w = obj.mat->shade(arg);
-                assert(!is_nan(w));
-                ray = Ray(hit_pos, arg.output);
-                W *= (w / p);
-                assert(!is_inf(W));
-            }
-            break;
-
-        case Material::Phong:
-            {
-                //auto shininess = obj.mat->shininess;
-
-                //const auto phi = F_2PI * random->get_as_float();
-                //const auto cos_theta = pow( 1.0f - random->get_as_float(), 1.0f / (shininess + 1.0f) );
-                //const auto sin_theta = sqrt( 1.0f - (cos_theta * cos_theta) );
-                //const auto x = cos( phi ) * sin_theta;
-                //const auto y = sin( phi ) * sin_theta;
-                //const auto z = cos_theta;
-
-                //auto w = reflect(ray.dir, orienting_normal);
-                //Onb onb;
-                //onb.FromW(w);
-
-                //auto dir    = normalize(onb.u * x + onb.v * y + onb.w * z);
-                //auto cosine = dot(dir, orienting_normal);
-                auto w = obj.mat->shade(arg);
-                assert(!is_nan(w));
-
-                // 直接光をサンプル.
-                if (id != g_lightId)
-                {
-                    const auto& light = g_spheres[g_lightId];
-
-                    const auto r1 = F_2PI * random->get_as_float();
-                    const auto r2 = 1.0f - 2.0f * random->get_as_float();
-                    const auto r3 = sqrt(1.0f - r2 * r2);
-                    const auto light_pos = light.pos + (light.radius + F_HIT_MIN) * normalize(Vector3(r3 * cos(r1), r3 * sin(r1), r2));
-
-                    // ライトベクトル.
-                    auto light_dir   = light_pos - hit_pos;
-
-                    // ライトへの距離の2乗
-                    auto light_dist2 = dot(light_dir, light_dir);
-
-                    // 正規化.
-                    light_dir = normalize(light_dir);
-
-                    // ライトの法線ベクトル.
-                    auto light_normal = normalize(light_pos - light.pos);
-
-                    auto dot0 = abs(dot(orienting_normal, light_dir));
-                    auto dot1 = abs(dot(light_normal,    -light_dir));
-                    auto rad2 = light.radius * light.radius;
-
-                    float  shadow_t;
-                    int    shadow_id;
-                    Ray    shadow_ray(hit_pos, light_dir);
-
-                    // シャドウレイを発射.
-                    auto hit = intersect_scene(shadow_ray, &shadow_t, &shadow_id);
-
-                    // ライトのみと衝突した場合のみ寄与を取る.
-                    {
-                        auto hit_light = hit && (shadow_id == g_lightId);
-                        if (hit_light)
-                        {
-                            auto G = (dot0 * dot1) / light_dist2;
-
-                            // ライトの確率密度.
-                            auto light_pdf  = 1.0f / (4.0f * F_PI * rad2);
-                            auto light_pdf2 = light_pdf * light_pdf;
-
-                            // BRDFの確率密度.
-                            //auto brdf_pdf   = ((shininess + 1.0f) / F_2PI) * dot(normal, dir) / light_dist2;
-                            auto brdf_pdf = arg.pdf / light_dist2;
-
-                            // 多重重点的サンプルの重みを求める.
-                            auto mis_weight = light_pdf2 / (light_pdf2 + brdf_pdf * brdf_pdf);
-
-                            //L += W * light.mat->emissive * (obj.mat->albedo / F_PI) * G * mis_weight / light_pdf;
-                            auto l = W * light.mat->emissive() * (w / F_PI) * G * mis_weight / light_pdf;
-                            assert(!is_nan(l));
-                            L += l;
-                        }
-                    }
-                }
-
-                //ray = Ray(hit_pos, dir);
-                //W *= obj.mat->albedo * cosine * ((shininess + 2.0f) / (shininess + 1.0f));
-                ray = Ray(hit_pos, arg.output);
-                W *= (w / p);
-                assert(!is_inf(W));
-            }
-            break;
-        }
-#endif
+        // 重みがゼロなら計算しても意味ないので打ち切り.
+        if (is_zero(W))
+        { break; }
     }
 
-    //printf_s("L( %f, %f, %f )\n", L.x, L.y, L.z);
-    assert(!is_nan(L));
     return L;
 }
 
@@ -505,7 +269,7 @@ int main(int argc, char** argv)
             auto end = std::chrono::system_clock::now();
             auto sec = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
 
-            printf_s("* elapsed time = %llu(sec)\n", sec);
+            printf_s("* time = %llu(sec)\n", sec);
         }
 
         is_finish = true;
@@ -580,6 +344,7 @@ int main(int argc, char** argv)
     // スレッドの終了を待機.
     thd.join();
 
+    // 解放処理.
     for(auto& itr : g_basic_mat)
     {
         delete itr;

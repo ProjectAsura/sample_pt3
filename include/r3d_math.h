@@ -48,6 +48,9 @@ inline bool is_nan(float value)
 inline bool is_inf(float value)
 { return std::isinf(value); }
 
+inline bool is_zero(float value)
+{ return fabs(value) < F_EPSILON; }
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Vector2 structure
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -240,6 +243,12 @@ inline Vector3 saturate(const Vector3& value)
         saturate(value.z)
     );
 }
+
+inline bool is_zero(const Vector2& value)
+{ return is_zero(value.x) && is_zero(value.y); }
+
+inline bool is_zero(const Vector3& value)
+{ return is_zero(value.x) && is_zero(value.y) && is_zero(value.z); }
 
 inline bool is_nan(const Vector2& value)
 { return is_nan(value.x) || is_nan(value.y); }
