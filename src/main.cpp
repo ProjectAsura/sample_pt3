@@ -21,6 +21,7 @@
 #include <omp.h>
 #endif//_OPENMP
 
+
 namespace {
 
 //-------------------------------------------------------------------------------------------------
@@ -56,25 +57,24 @@ const int   g_lightId = 8;
 //-------------------------------------------------------------------------------------------------
 //      シーンとの交差判定を行います.
 //-------------------------------------------------------------------------------------------------
-inline bool intersect_scene(const Ray& ray, float* t, int* id)
+inline bool intersect_scene(const Ray& ray, HitRecord& record)
 {
     auto n = static_cast<int>(sizeof(g_spheres) / sizeof(g_spheres[0]));
 
-    *t  = F_MAX;
-    *id = -1;
+    record.dist  = F_MAX;
+    record.shape = nullptr;
+    record.mat   = nullptr;
+
+    bool hit = false;
 
     for (auto i = 0; i < n; ++i)
     {
-        auto d = g_spheres[i].intersect(ray);
-        if (d > F_HIT_MIN && d < *t)
-        {
-            *t  = d;
-            *id = i;
-        }
+        hit |= g_spheres[i].hit(ray, record);
     }
 
-    return (*t < F_HIT_MAX);
+    return hit;
 }
+
 
 //-------------------------------------------------------------------------------------------------
 //      放射輝度を求めます.
@@ -89,31 +89,29 @@ Vector3 radiance(const Ray& input_ray, Random* random)
 
     for(int depth=0; ; depth++)
     {
-        float t;
-        int   id;
+        HitRecord record = {};
 
-        // シーンとの交差判定.
-        if (!intersect_scene(ray, &t, &id))
+        if (!intersect_scene(ray, record))
         { break; }
 
         // 交差物体.
-        const auto& obj = g_spheres[id];
+        const auto obj = record.shape;
 
         // 交差位置.
-        const auto hit_pos = ray.pos + ray.dir * t;
+        const auto hit_pos = record.pos;
 
         // 法線ベクトル.
-        const auto normal  = normalize(hit_pos - obj.pos);
+        const auto normal = record.nrm;
 
         // 物体からのレイの入出を考慮した法線ベクトル.
         const auto orienting_normal = (dot(normal, ray.dir) < 0.0) ? normal : -normal;
 
-        auto p = obj.mat->threshold();
+        auto p = record.mat->threshold();
 
         if (direct_light)
-        { L += W * obj.mat->emissive(); }
+        { L += W * record.mat->emissive(); }
 
-        direct_light = obj.mat->is_delta();
+        direct_light = record.mat->is_delta();
 
         // 打ち切り深度に達したら終わり.
         if(depth > g_max_depth)
@@ -130,12 +128,13 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         arg.input  = ray.dir;
         arg.normal = normal;
         arg.random = *random;
+        arg.uv     = record.uv;
 
         // マテリアルの評価.
-        auto w = obj.mat->shade(arg);
+        auto w = record.mat->shade(arg);
 
         // 直接光をサンプル.
-        if (id != g_lightId && !obj.mat->is_delta())
+        if (obj != &g_spheres[g_lightId] && !record.mat->is_delta())
         {
             const auto& light = g_spheres[g_lightId];
 
