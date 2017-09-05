@@ -42,6 +42,9 @@ inline float clamp(float value, float mini, float maxi)
 inline float saturate(float value)
 { return clamp(value, 0, 1); }
 
+inline float lerp(float a, float b, float t)
+{ return a + (b - a) * t; }
+
 inline bool is_nan(float value)
 { return value != value; }
 
@@ -336,7 +339,6 @@ struct Matrix
     }
 };
 
-
 inline Vector2 operator * (float lhs, const Vector2& rhs)
 { return Vector2(lhs * rhs.x, lhs * rhs.y); }
 
@@ -363,6 +365,23 @@ inline Vector3 saturate(const Vector3& value)
         saturate(value.x),
         saturate(value.y),
         saturate(value.z)
+    );
+}
+
+inline Vector2 lerp(const Vector2& a, const Vector2& b, float t)
+{
+    return Vector2(
+        lerp(a.x, b.x, t),
+        lerp(a.y, b.y, t)
+    );
+}
+
+inline Vector3 lerp(const Vector3& a, const Vector3& b, float t)
+{
+    return Vector3(
+        lerp(a.x, b.x, t),
+        lerp(a.y, b.y, t),
+        lerp(a.z, b.z, t)
     );
 }
 

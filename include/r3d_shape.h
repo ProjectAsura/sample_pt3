@@ -163,7 +163,7 @@ public:
     }
 };
 
-#if 0
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Triangle class
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -177,10 +177,11 @@ public:
         instance->m_mat     = mat;
         instance->m_edge[0] = vtx[1].pos - vtx[0].pos;
         instance->m_edge[1] = vtx[2].pos - vtx[0].pos;
+        instance->m_edge[2] = vtx[2].pos - vtx[1].pos;
         return instance;
     }
 
-    inline bool shadow_hit(const Ray& ray, float& dist) const override
+    inline bool shadow_hit(const Ray& ray, ShadowRecord& record) const override
     {
         auto s1  = cross( ray.dir, m_edge[1] );
         auto div = dot( s1, m_edge[0] );
@@ -198,14 +199,18 @@ public:
         if ( gamma <= 0.0 || ( beta + gamma ) >= 1.0 )
         { return false; }
 
-        auto dt = dot( m_edge[1], s2 ) / div;
-        if ( dt < F_HIT_MIN || dt > F_HIT_MAX )
+        auto t = dot( m_edge[1], s2 ) / div;
+        if ( t < F_HIT_MIN || t > F_HIT_MAX )
         { return false; }
 
-        if ( dt >= dist )
+        if ( t >= record.dist )
         { return false; }
 
-        dist = dt;
+        record.dist  = t;
+        record.mat   = m_mat;
+        record.shape = this;
+        record.pdf   = 1.0f;
+
         return true;
     }
 
@@ -252,10 +257,24 @@ public:
         return true;
     }
 
+    void sample(Random& random, Vector3& sample_pos, Vector3& sample_nrm) const override
+    {
+        auto a = random.get_as_float();
+        auto b = random.get_as_float();
+        if (a + b > 1.0)
+        {
+            a = 1.0f - a;
+            b = 1.0f - b;
+        }
+
+        sample_pos = m_vtx[0].pos + m_edge[0] * a + m_edge[1] * b;
+        sample_nrm = normalize(cross(m_edge[0], m_edge[1]));
+    }
+
 private:
     const Vertex*   m_vtx;
     const Material* m_mat;
-    Vector3         m_edge[2];
+    Vector3         m_edge[3];
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -273,13 +292,13 @@ public:
         return instance;
     }
 
-    inline bool shadow_hit(const Ray& ray, float& dist) const override
+    inline bool shadow_hit(const Ray& ray, ShadowRecord& record) const override
     {
         auto pos = mul_coord ( ray.pos, m_inv_world );
         auto dir = mul_normal( ray.dir, m_inv_world );
         auto localRaySet = Ray( pos, normalize(dir) );
 
-        if ( m_shape->shadow_hit( localRaySet, dist ) )
+        if ( m_shape->shadow_hit( localRaySet, record ) )
         { return true; }
 
         return false;
@@ -301,6 +320,15 @@ public:
         return false;
     }
 
+    void sample(Random& random, Vector3& sample_pos, Vector3& sample_nrm) const override
+    {
+        Vector3 pos;
+        Vector3 nrm;
+        m_shape->sample(random, pos, nrm);
+        sample_pos = mul(pos, m_world);
+        sample_nrm = mul_normal(nrm, m_inv_world);
+    }
+
 private:
     Shape* m_shape;
     Matrix m_world;
@@ -314,8 +342,9 @@ class Mesh : public Shape
 {
 public:
     static Mesh* create(const char* filename);
-    bool shadow_hit(const Ray& ray, float& dist) const override;
+    bool shadow_hit(const Ray& ray, ShadowRecord& record) const override;
     bool hit(const Ray& ray, HitRecord& record) const override;
+    void sample(Random& random, Vector3& sample_pos, Vector3& sample_nrm) const override;
 
 private:
     std::vector<Vertex>     m_vtxs;
@@ -325,4 +354,3 @@ private:
 
     bool load(const char* filename);
 };
-#endif

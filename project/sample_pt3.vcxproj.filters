@@ -35,12 +35,6 @@
     <ClInclude Include="..\include\r3d_shape.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>
-    <ClInclude Include="..\external\stb\stb_image.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
-    <ClInclude Include="..\external\stb\stb_image_write.h">
-      <Filter>ヘッダー ファイル</Filter>
-    </ClInclude>
     <ClInclude Include="..\include\r3d_canvas.h">
       <Filter>ヘッダー ファイル</Filter>
     </ClInclude>

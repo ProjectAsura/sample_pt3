@@ -9,7 +9,7 @@
 //-------------------------------------------------------------------------------------------------
 #include <r3d_canvas.h>
 #include <algorithm>
-#include <stb/stb_image_write.h>
+#include <stb_image_write.h>
 
 
 namespace {
