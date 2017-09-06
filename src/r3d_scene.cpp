@@ -11,8 +11,9 @@
 #include <string>
 #include <cassert>
 #include <fstream>
+#include <map>
 #include <cereal/cereal.hpp>
-#include <cereal/archives/json.hpp>
+#include <cereal/archives/xml.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/string.hpp>
 
@@ -199,7 +200,6 @@ struct ResCamera
     Vector3     dir;
     Vector3     upward;
     float       fov;
-    float       aspect;
     float       znear;
 
     template<class Archive>
@@ -210,7 +210,6 @@ struct ResCamera
             CEREAL_NVP(dir),
             CEREAL_NVP(upward),
             CEREAL_NVP(fov),
-            CEREAL_NVP(aspect),
             CEREAL_NVP(znear)
         );
     }
@@ -221,7 +220,7 @@ struct ResThinLensCamera
     Vector3     pos;
     Vector3     dir;
     Vector3     upward;
-    float       fov;
+    float       fov_deg;
     float       aspect;
     float       znear;
     float       radius;
@@ -234,7 +233,7 @@ struct ResThinLensCamera
             CEREAL_NVP(pos),
             CEREAL_NVP(dir),
             CEREAL_NVP(upward),
-            CEREAL_NVP(fov),
+            CEREAL_NVP(fov_deg),
             CEREAL_NVP(aspect),
             CEREAL_NVP(znear),
             CEREAL_NVP(radius),
@@ -249,7 +248,7 @@ struct ResScene
     int                             height;
     int                             samples;
     std::vector<ResTexture>         textures;
-    std::vector<ResLambert>         lambers;
+    std::vector<ResLambert>         lamberts;
     std::vector<ResMirror>          mirrors;
     std::vector<ResRefract>         refracts;
     std::vector<ResPhong>           phongs;
@@ -265,7 +264,7 @@ struct ResScene
             CEREAL_NVP(height),
             CEREAL_NVP(samples),
             CEREAL_NVP(textures),
-            CEREAL_NVP(lambers),
+            CEREAL_NVP(lamberts),
             CEREAL_NVP(mirrors),
             CEREAL_NVP(refracts),
             CEREAL_NVP(phongs),
@@ -276,6 +275,131 @@ struct ResScene
 
     void default_scene()
     {
+        int id = 1;
+
+        width = 1280;
+        height = 960;
+        samples = 512;
+
+        ResLambert lambert0 = {};
+        lambert0.id = id++;
+        lambert0.color = Vector3(0.25f, 0.75f, 0.25f);
+        lambert0.emissive = Vector3(0.0f, 0.0f, 0.0f);
+
+        ResLambert lambert1 = {};
+        lambert1.id = id++;
+        lambert1.color = Vector3(0.25f, 0.25f, 0.75f);
+        lambert1.emissive = Vector3(0.0f, 0.0f, 0.0f);
+
+        ResLambert lambert2 = {};
+        lambert2.id = id++;
+        lambert2.color = Vector3(0.75f, 0.75f, 0.75f);
+        lambert2.emissive = Vector3(0.0f, 0.0f, 0.0f);
+
+        ResLambert lambert3 = {};
+        lambert3.id = id++;
+        lambert3.color = Vector3(0.01f, 0.01f, 0.01f);
+        lambert3.emissive = Vector3(0.0f, 0.0f, 0.0f);
+
+        ResLambert lambert4 = {};
+        lambert4.id = id++;
+        lambert4.color = Vector3(0.0f, 0.0f, 0.0f);
+        lambert4.emissive = Vector3(12.0f, 12.0f, 12.0f);
+
+        lamberts.push_back(lambert0);
+        lamberts.push_back(lambert1);
+        lamberts.push_back(lambert2);
+        lamberts.push_back(lambert3);
+        lamberts.push_back(lambert4);
+
+        ResMirror mirror0 = {};
+        mirror0.id      = id++;
+        mirror0.color   = Vector3(0.75f, 0.25f, 0.25f);
+        mirror0.emissive = Vector3(0.0f, 0.0f, 0.0f);
+
+        mirrors.push_back(mirror0);
+
+        ResRefract refract0 = {};
+        refract0.id    = id++;
+        refract0.color = Vector3(0.99f, 0.99f, 0.99f);
+        refract0.ior   = 1.5f;
+        refract0.emissive = Vector3(0.0f, 0.0f, 0.0f);
+
+        refracts.push_back(refract0);
+
+        id = 1;
+        ResSphere sphere0 = {};
+        sphere0.id          = id++;
+        sphere0.radius      = 1e5f;
+        sphere0.pos         = Vector3(1e5f + 1.0f, 40.8f, 81.6f);
+        sphere0.material_id = lambert0.id;
+
+        ResSphere sphere1 = {};
+        sphere1.id          = id++;
+        sphere1.radius      = 1e5f;
+        sphere1.pos         = Vector3(-1e5f + 99.0f, 40.8f, 81.6f);
+        sphere1.material_id = lambert1.id;
+
+        ResSphere sphere2 = {};
+        sphere2.id          = id++;
+        sphere2.radius      = 1e5f;
+        sphere2.pos         = Vector3(50.0f, 40.8f, 1e5f);
+        sphere2.material_id = lambert2.id;
+
+        ResSphere sphere3 = {};
+        sphere3.id          = id++;
+        sphere3.radius      = 1e5f;
+        sphere3.pos         = Vector3(50.0f, 40.8f, -1e5f + 170.0f);
+        sphere3.material_id = lambert3.id;
+
+        ResSphere sphere4 = {};
+        sphere4.id          = id++;
+        sphere4.radius      = 1e5f;
+        sphere4.pos         = Vector3(50.0f, 1e5f, 81.6f);
+        sphere4.material_id = lambert2.id;
+
+        ResSphere sphere5= {};
+        sphere5.id          = id++;
+        sphere5.radius      = 1e5f;
+        sphere5.pos         = Vector3(50.0f, -1e5f + 81.6f, 81.6f);
+        sphere5.material_id = lambert2.id;
+
+        ResSphere sphere6 = {};
+        sphere6.id          = id++;
+        sphere6.radius      = 16.5f;
+        sphere6.pos         = Vector3(27.0f, 16.5f, 47.0f);
+        sphere6.material_id = mirror0.id;
+
+        ResSphere sphere7 = {};
+        sphere7.id          = id++;
+        sphere7.radius      = 16.5f;
+        sphere7.pos         = Vector3(73.0f, 16.5f, 78.0f);
+        sphere7.material_id = refract0.id;
+
+        ResSphere sphere8 = {};
+        sphere8.id          = id++;
+        sphere8.radius      = 5.0f;
+        sphere8.pos         = Vector3(50.0f, 81.6f, 81.6f);
+        sphere8.material_id = lambert4.id;
+
+        sphere_shapes.push_back(sphere0);
+        sphere_shapes.push_back(sphere1);
+        sphere_shapes.push_back(sphere2);
+        sphere_shapes.push_back(sphere3);
+        sphere_shapes.push_back(sphere4);
+        sphere_shapes.push_back(sphere5);
+        sphere_shapes.push_back(sphere6);
+        sphere_shapes.push_back(sphere7);
+        sphere_shapes.push_back(sphere8);
+
+        ResCamera camera = {};
+        camera.pos      = Vector3(50.0f, 52.0f, 295.6f);
+        camera.dir      = normalize(Vector3(0.0f, -0.042612f, -1.0f));
+        camera.upward   = Vector3(0.0f, 1.0f, 0.0f);
+        camera.fov      = 45.0f;
+        camera.znear    = 130.0f;
+
+        cameras.push_back(camera);
     }
 };
 
@@ -298,10 +422,114 @@ bool Scene::load(const char* filename)
 
     {
         ResScene res;
-        cereal::JSONInputArchive arc(stream);
+        cereal::XMLInputArchive arc(stream);
         arc(cereal::make_nvp("scene", res));
 
-        // TODO : convert.
+        m_w = res.width;
+        m_h = res.height;
+        m_s = res.samples;
+
+        if (!res.textures.empty())
+        {
+            m_texs.resize(res.textures.size());
+            for(size_t i=0; i<m_texs.size(); ++i)
+            {
+                m_texs[i] = new(std::nothrow) Texture();
+                if (!m_texs[i]->read(res.textures[i].path.c_str()))
+                {
+                    fprintf_s(stderr, "Error : Texture Load Failed. %s\n", res.textures[i].path.c_str());
+                }
+            }
+        }
+
+        std::map<int, size_t> matid_dic;
+
+        if (!res.lamberts.empty())
+        {
+            for(size_t i=0; i<res.lamberts.size(); ++i)
+            {
+                auto lambert = Lambert::create(res.lamberts[i].color, res.lamberts[i].emissive);
+                auto idx = m_mats.size();
+                m_mats.push_back(lambert);
+                matid_dic[res.lamberts[i].id] = idx;
+            }
+        }
+
+        if (!res.mirrors.empty())
+        {
+            for(size_t i=0; i<res.mirrors.size(); ++i)
+            {
+                auto mirror = Mirror::create(res.mirrors[i].color, res.mirrors[i].emissive);
+                auto idx = m_mats.size();
+                m_mats.push_back(mirror);
+                matid_dic[res.mirrors[i].id] = idx;
+            }
+        }
+
+        if (!res.refracts.empty())
+        {
+            for(size_t i=0; i<res.refracts.size(); ++i)
+            {
+                auto refract = Refract::create(res.refracts[i].color, res.refracts[i].ior, res.refracts[i].emissive);
+                auto idx = m_mats.size();
+                m_mats.push_back(refract);
+                matid_dic[res.refracts[i].id] = idx;
+            }
+        }
+
+        if (!res.phongs.empty())
+        {
+            for(size_t i=0; i<res.phongs.size(); ++i)
+            {
+                auto phong = Phong::create(res.phongs[i].color, res.phongs[i].shininess, res.phongs[i].emissive);
+                auto idx = m_mats.size();
+                matid_dic[res.phongs[i].id] = idx;
+            }
+        }
+
+        m_mats.shrink_to_fit();
+
+        std::map<int, size_t> shapeid_dic;
+
+        if (!res.sphere_shapes.empty())
+        {
+            for(size_t i=0; i<res.sphere_shapes.size(); ++i)
+            {
+                auto idx = matid_dic[res.sphere_shapes[i].material_id];
+                auto mat = m_mats[idx];
+                auto shape = Sphere::create(res.sphere_shapes[i].radius, res.sphere_shapes[i].pos, mat);
+                auto id = m_objs.size();
+                m_objs.push_back(shape);
+                shapeid_dic[res.sphere_shapes[i].id] = id;
+            }
+        }
+
+        if (!res.instance_shapes.empty())
+        {
+            for(size_t i=0; i<res.instance_shapes.size(); ++i)
+            {
+                auto idx = shapeid_dic[res.instance_shapes[i].shape_id];
+                auto obj = m_objs[idx];
+                auto shape = ShapeInstance::create(obj, res.instance_shapes[i].world);
+                auto id = m_objs.size();
+                m_objs.push_back(shape);
+                shapeid_dic[res.instance_shapes[i].id] = id;
+            }
+        }
+
+        m_objs.shrink_to_fit();
+
+        if (!res.cameras.empty())
+        {
+            m_cam = new (std::nothrow) Camera(
+                res.cameras[0].pos,
+                res.cameras[0].dir,
+                res.cameras[0].upward,
+                radian(res.cameras[0].fov),
+                res.cameras[0].znear,
+                float(m_w),
+                float(m_h));
+        }
     }
 
     return true;
@@ -317,9 +545,8 @@ bool Scene::save(const char* filename)
     {
         ResScene res;
 
-        // TODO : convert.
-
-        cereal::JSONOutputArchive arc(stream);
+        res.default_scene();
+        cereal::XMLOutputArchive arc(stream);
         arc(cereal::make_nvp("scene", res));
     }
 

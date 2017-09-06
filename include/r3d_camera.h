@@ -23,28 +23,41 @@ public:
         const Vector3&  dir,
         const Vector3&  upward,
         float           fov,
-        float           aspect,
-        float           znear
+        float           znear,
+        float           width,
+        float           height
     )
     {
         pos         = position;
-        axis_x      = normalize(cross(dir, upward)) * fov * aspect;
-        axis_y      = normalize(cross(dir, axis_x)) * fov;
-        axis_z      = dir;
+        axis_z      = normalize(dir);
+        axis_x      = normalize(cross(axis_z, upward));
+        axis_y      = normalize(cross(axis_z, axis_x));
         near_clip   = znear;
+
+        auto aspect = width / height;
+        inv_w = 1.0f / width;
+        inv_h = 1.0f / height;
+
+        auto tan_fov = tan(fov * 0.5f);
+        axis_x *= tan_fov * aspect;
+        axis_y *= tan_fov;
     }
 
     inline Ray emit(float x, float y) const
     {
-        auto d = axis_x * x + axis_y * y + axis_z;
-        auto p = pos + (d * near_clip);
+        auto fx = x * inv_w - 0.5f;
+        auto fy = y * inv_h - 0.5f;
+        auto d = axis_x * fx + axis_y * fy + axis_z;
+        auto p = pos + d * near_clip;
         return Ray(p, normalize(d));
     }
 
 private:
     Vector3 pos;        //!< 位置座標です.
-    Vector3 axis_x;     //!< 基底ベクトル(X軸)
-    Vector3 axis_y;     //!< 基底ベクトル(Y軸)
-    Vector3 axis_z;     //!< 基底ベクトル(Z軸).
-    float   near_clip;  //!< ニア平面までの距離.
+    Vector3 axis_x;     //!< X軸
+    Vector3 axis_y;     //!< Y軸
+    Vector3 axis_z;     //!< Z軸
+    float   inv_w;      //!< 横幅の逆数.
+    float   inv_h;      //!< 縦幅の逆数.
+    float   near_clip;  //!< スクリーンまでの距離.
 };

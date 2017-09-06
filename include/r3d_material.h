@@ -93,7 +93,7 @@ public:
         const auto r2s = sqrt(r2);
 
         // 出射方向.
-        arg.output = normalize(onb.u * cos(r1) * r2s + onb.v * sin(r1) * r2s + onb.w * sqrt(1.0 - r2));
+        arg.output = normalize(onb.u * cos(r1) * r2s + onb.v * sin(r1) * r2s + onb.w * sqrt(1.0f - r2));
 
         const auto cosine = dot(normal, arg.output);
 
@@ -145,7 +145,7 @@ public:
         // 物体からのレイの入出を考慮した法線ベクトル.
         auto normal = (dot(arg.normal, arg.input) < 0.0f) ? arg.normal : -arg.normal;
 
-        arg.output = reflect(arg.input, normal);
+        arg.output = normalize(reflect(arg.input, normal));
         arg.pdf    = 1.0f;
         return m_albedo;
     }
@@ -291,7 +291,7 @@ public:
         arg.output = dir;
         arg.pdf    = ((m_shininess + 1.0f) / F_2PI) * cosine;
 
-        return m_albedo * cosine * ((m_shininess + 2.0) / (m_shininess + 1.0f));
+        return m_albedo * cosine * ((m_shininess + 2.0f) / (m_shininess + 1.0f));
     }
 
 private:

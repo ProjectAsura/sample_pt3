@@ -31,6 +31,10 @@ public:
     bool hit(const Ray& ray, HitRecord& record) const;
     bool hit(const Ray& ray, ShadowRecord& record) const;
 
+    int width  () const { return m_w; }
+    int height () const { return m_h; }
+    int samples() const { return m_s; }
+
 private:
     int                     m_w;
     int                     m_h;
