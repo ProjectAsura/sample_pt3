@@ -41,7 +41,7 @@ Texture::~Texture()
 //-------------------------------------------------------------------------------------------------
 //      読み込み処理.
 //-------------------------------------------------------------------------------------------------
-bool Texture::read(const char* filename)
+bool Texture::load(const char* filename)
 {
     m_buf = stbi_loadf(filename, &m_w, &m_h, &m_c, 3);
     return m_buf != nullptr;
@@ -60,8 +60,7 @@ Vector3 Texture::sample3d(const Vector3& texcoord) const
 {
     Vector2 uv( 0.0f, acos(texcoord.y) / F_PI);
 
-    if (fabs(texcoord.x) > F_EPSILON 
-     && fabs(texcoord.z) > F_EPSILON)
+    if (!is_zero(texcoord.x) || !is_zero(texcoord.z))
     {
         auto phi = atan2(texcoord.z, texcoord.x);
         if (texcoord.z < 0.0f)
@@ -78,8 +77,8 @@ Vector3 Texture::sample3d(const Vector3& texcoord) const
 //-------------------------------------------------------------------------------------------------
 Vector3 Texture::at(int x, int y) const
 {
-    x = abs(x & m_w);
-    y = abs(y & m_h);
+    x = abs(x % m_w);
+    y = abs(y % m_h);
 
     auto idx = m_w * 3 * y + x * 3;
     return Vector3(m_buf[idx + 0], m_buf[idx + 1], m_buf[idx + 2]);
@@ -107,7 +106,7 @@ Vector3 Texture::sample_bilinear(const Vector2& texcoord) const
     auto y0 = int(floor(fy));
 
     auto x1 = x0 + 1;
-    auto y1 = x0 + 1;
+    auto y1 = y0 + 1;
 
     return (x1 - fx) * ((y1 - fy) * at(x0, y0) + (fy - y0) * at(x0, y1))
          + (fx - x0) * ((y1 - fy) * at(x1, y0) + (fy - y0) * at(x1, y1));

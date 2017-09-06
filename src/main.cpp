@@ -29,70 +29,8 @@ namespace {
 //-------------------------------------------------------------------------------------------------
 // Global Varaibles.
 //-------------------------------------------------------------------------------------------------
-const int     g_max_depth = 4;
-const Vector3 g_back_ground (0.0,   0.0,    0.0);
-
-//const Material* g_basic_mat[] = {
-//    Lambert::create(Vector3(0.25f, 0.75f, 0.25f)),
-//    Lambert::create(Vector3(0.25f, 0.25f, 0.75f)),
-//    Lambert::create(Vector3(0.75f, 0.75f, 0.75f)),
-//    Lambert::create(Vector3(0.01f, 0.01f, 0.01f)),
-//    Mirror::create(Vector3(0.75f, 0.25f, 0.25f)),
-//    Lambert::create(Vector3(0.0f, 0.0f, 0.0f), Vector3(12.0f, 12.0f, 12.0f)),
-//    Refract::create(Vector3(0.99f, 0.99f, 0.99f), 1.5f)
-//};
-//
-//const Shape*  g_spheres[] = {
-//    Sphere::create(1e5,     Vector3( 1e5 + 1.0,    40.8,          81.6), g_basic_mat[0]),
-//    Sphere::create(1e5,     Vector3(-1e5 + 99.0,   40.8,          81.6), g_basic_mat[1]),
-//    Sphere::create(1e5,     Vector3(50.0,          40.8,           1e5), g_basic_mat[2]),
-//    Sphere::create(1e5,     Vector3(50.0,          40.8,  -1e5 + 170.0), g_basic_mat[3]),
-//    Sphere::create(1e5,     Vector3(50.0,           1e5,          81.6), g_basic_mat[2]),
-//    Sphere::create(1e5,     Vector3(50.0,   -1e5 + 81.6,          81.6), g_basic_mat[2]),
-//    Sphere::create(16.5,    Vector3(27.0,          16.5,          47.0), g_basic_mat[4]),
-//    Sphere::create(16.5,    Vector3(73.0,          16.5,          78.0), g_basic_mat[6]),
-//    Sphere::create(5.0,     Vector3(50.0,          81.6,          81.6), g_basic_mat[5])
-//};
-const int   g_lightId = 8;
-
-Scene g_scene;
-
-
-
-//-------------------------------------------------------------------------------------------------
-//      シーンとの交差判定を行います.
-//-------------------------------------------------------------------------------------------------
-//inline bool intersect_scene(const Ray& ray, HitRecord& record)
-//{ return g_scene.hit(ray, record); }
-    //auto n = static_cast<int>(sizeof(g_spheres) / sizeof(g_spheres[0]));
-
-    //record.dist  = F_MAX;
-    //record.shape = nullptr;
-    //record.mat   = nullptr;
-
-    //bool hit = false;
-
-    //for (auto i = 0; i < n; ++i)
-    //{
-    //    hit |= g_spheres[i]->hit(ray, record);
-    //}
-
-    //return hit;
-//}
-
-//inline bool intersect_scene(const Ray& ray, ShadowRecord& record)
-//{ return g_scene.hit(ray, record); }
-//    auto n = static_cast<int>(sizeof(g_spheres) / sizeof(g_spheres[0]));
-//
-//    bool hit = false;
-//
-//    for (auto i = 0; i < n; ++i)
-//    {
-//        hit |= g_spheres[i]->shadow_hit(ray, record);
-//    }
-//
-//    return hit;
-//}
+const int     g_max_depth = 3;
+Scene         g_scene;
 
 
 //-------------------------------------------------------------------------------------------------
@@ -106,21 +44,15 @@ Vector3 radiance(const Ray& input_ray, Random* random)
 
     auto direct_light = true;
 
-    for(int depth=0; depth < 16; depth++)
+    for(int depth=0;; depth++)
     {
         HitRecord record = {};
 
         if (!g_scene.hit(ray, record))
-        { break; }
-
-        // 交差物体.
-        //const auto obj = record.shape;
-
-        // 交差位置.
-        //const auto hit_pos = record.pos;
-
-        // 法線ベクトル.
-        //const auto normal = record.nrm;
+        {
+            L += W * g_scene.sample_ibl(ray.dir);
+            break;
+        }
 
         auto p = record.mat->threshold();
 
@@ -133,7 +65,9 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         if(depth > g_max_depth)
         {
             if (random->get_as_float() >= p)
-            { break; }
+            {
+                break;
+            }
         }
         else
         {
@@ -221,6 +155,9 @@ Vector3 radiance(const Ray& input_ray, Random* random)
 //-------------------------------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
+    Scene scn;
+    scn.save("test_scene.xml");
+
     if (argc <= 1)
     {
         if (!g_scene.load("test_scene.xml"))
@@ -310,16 +247,6 @@ int main(int argc, char** argv)
         printf_s("* cpu core : %d\n", core_count);
     #endif//_OPENMP
 
-    //// カメラ用意.
-    //Camera camera(
-    //    Vector3(50.0, 52.0, 295.6),
-    //    normalize(Vector3(0.0, -0.042612, -1.0)),
-    //    Vector3(0.0, 1.0, 0.0),
-    //    0.5135,
-    //    double(width) / double(height),
-    //    130.0
-    //);
-
     // レンダーターゲット生成.
     canvas.resize(w, h);
 
@@ -361,19 +288,6 @@ int main(int argc, char** argv)
 
     // スレッドの終了を待機.
     thd.join();
-
-    //for(auto& itr : g_spheres)
-    //{
-    //    delete itr;
-    //    itr = nullptr;
-    //}
-
-    //// 解放処理.
-    //for(auto& itr : g_basic_mat)
-    //{
-    //    delete itr;
-    //    itr = nullptr;
-    //}
 
     return 0;
 }

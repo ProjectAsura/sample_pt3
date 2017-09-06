@@ -255,6 +255,7 @@ struct ResScene
     std::vector<ResSphere>          sphere_shapes;
     std::vector<ResShapeInstance>   instance_shapes;
     std::vector<ResCamera>          cameras;
+    std::string                     ibl_path;
 
     template<class Archive>
     void serialize(Archive& archive)
@@ -269,7 +270,8 @@ struct ResScene
             CEREAL_NVP(refracts),
             CEREAL_NVP(phongs),
             CEREAL_NVP(sphere_shapes),
-            CEREAL_NVP(cameras)
+            CEREAL_NVP(cameras),
+            CEREAL_NVP(ibl_path)
         );
     }
 
@@ -277,8 +279,10 @@ struct ResScene
     {
         int id = 1;
 
-        width = 1280;
-        height = 960;
+        //width = 1280;
+        //height = 960;
+        width = 480;
+        height = 270;
         samples = 512;
 
         ResLambert lambert0 = {};
@@ -352,11 +356,11 @@ struct ResScene
         sphere3.pos         = Vector3(50.0f, 40.8f, -1e5f + 170.0f);
         sphere3.material_id = lambert3.id;
 
-        ResSphere sphere4 = {};
-        sphere4.id          = id++;
-        sphere4.radius      = 1e5f;
-        sphere4.pos         = Vector3(50.0f, 1e5f, 81.6f);
-        sphere4.material_id = lambert2.id;
+        //ResSphere sphere4 = {};
+        //sphere4.id          = id++;
+        //sphere4.radius      = 1e5f;
+        //sphere4.pos         = Vector3(50.0f, 1e5f, 81.6f);
+        //sphere4.material_id = lambert2.id;
 
         ResSphere sphere5= {};
         sphere5.id          = id++;
@@ -376,21 +380,21 @@ struct ResScene
         sphere7.pos         = Vector3(73.0f, 16.5f, 78.0f);
         sphere7.material_id = refract0.id;
 
-        ResSphere sphere8 = {};
-        sphere8.id          = id++;
-        sphere8.radius      = 5.0f;
-        sphere8.pos         = Vector3(50.0f, 81.6f, 81.6f);
-        sphere8.material_id = lambert4.id;
+        //ResSphere sphere8 = {};
+        //sphere8.id          = id++;
+        //sphere8.radius      = 5.0f;
+        //sphere8.pos         = Vector3(50.0f, 81.6f, 81.6f);
+        //sphere8.material_id = lambert4.id;
 
         sphere_shapes.push_back(sphere0);
         sphere_shapes.push_back(sphere1);
         sphere_shapes.push_back(sphere2);
         sphere_shapes.push_back(sphere3);
-        sphere_shapes.push_back(sphere4);
+        //sphere_shapes.push_back(sphere4);
         sphere_shapes.push_back(sphere5);
         sphere_shapes.push_back(sphere6);
         sphere_shapes.push_back(sphere7);
-        sphere_shapes.push_back(sphere8);
+        //sphere_shapes.push_back(sphere8);
 
         ResCamera camera = {};
         camera.pos      = Vector3(50.0f, 52.0f, 295.6f);
@@ -400,6 +404,8 @@ struct ResScene
         camera.znear    = 130.0f;
 
         cameras.push_back(camera);
+
+        ibl_path = "HDR_041_Path.hdr";
     }
 };
 
@@ -435,7 +441,7 @@ bool Scene::load(const char* filename)
             for(size_t i=0; i<m_texs.size(); ++i)
             {
                 m_texs[i] = new(std::nothrow) Texture();
-                if (!m_texs[i]->read(res.textures[i].path.c_str()))
+                if (!m_texs[i]->load(res.textures[i].path.c_str()))
                 {
                     fprintf_s(stderr, "Error : Texture Load Failed. %s\n", res.textures[i].path.c_str());
                 }
@@ -529,6 +535,15 @@ bool Scene::load(const char* filename)
                 res.cameras[0].znear,
                 float(m_w),
                 float(m_h));
+        }
+
+        if (!res.ibl_path.empty())
+        {
+            m_ibl = new (std::nothrow) Texture();
+            if (!m_ibl->load(res.ibl_path.c_str()))
+            {
+                fprintf_s(stderr, "Error : IBL texture load failed. path = %s\n", res.ibl_path.c_str());
+            }
         }
     }
 
@@ -627,3 +642,6 @@ bool Scene::hit(const Ray& ray, ShadowRecord& record) const
 
     return hit;
 }
+
+Vector3 Scene::sample_ibl(const Vector3& dir) const
+{ return m_ibl->sample3d(dir); }

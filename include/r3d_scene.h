@@ -30,6 +30,7 @@ public:
     Ray  emit(float x, float y) const;
     bool hit(const Ray& ray, HitRecord& record) const;
     bool hit(const Ray& ray, ShadowRecord& record) const;
+    Vector3 sample_ibl(const Vector3& dir) const;
 
     int width  () const { return m_w; }
     int height () const { return m_h; }
@@ -43,4 +44,5 @@ private:
     std::vector<Shape*>     m_objs;
     std::vector<Material*>  m_mats;
     Camera*                 m_cam;
+    Texture*                m_ibl;
 };

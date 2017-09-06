@@ -21,7 +21,7 @@ public:
     Texture();
     ~Texture();
 
-    bool read(const char* filename);
+    bool load(const char* filename);
 
     Vector3 sample2d(const Vector2& texcoord) const;
     Vector3 sample3d(const Vector3& texcoord) const;
