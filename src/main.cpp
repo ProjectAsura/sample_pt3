@@ -13,15 +13,13 @@
 #include <r3d_material.h>
 #include <r3d_scene.h>
 #include <r3d_canvas.h>
+#include <r3d_task.h>
 #include <vector>
 #include <algorithm>
 #include <atomic>
 #include <thread>
 #include <cassert>
 #include <direct.h>
-#ifdef _OPENMP
-#include <omp.h>
-#endif//_OPENMP
 
 
 namespace {
@@ -32,11 +30,25 @@ namespace {
 const int     g_max_depth = 3;
 Scene         g_scene;
 
+struct ThreadData
+{
+    Random              random;
+    const Scene*        scene;
+    Canvas*             canvas;
+    std::atomic<bool>*  is_finish;
+    float               inv_s;
+};
+
+struct TaskData
+{
+    int w;
+    int h;
+};
 
 //-------------------------------------------------------------------------------------------------
 //      放射輝度を求めます.
 //-------------------------------------------------------------------------------------------------
-Vector3 radiance(const Ray& input_ray, Random* random)
+Vector3 radiance(const Ray& input_ray, Random& random, const Scene* scene)
 {
     Vector3 L(0, 0, 0);
     Vector3 W(1, 1, 1);
@@ -48,9 +60,9 @@ Vector3 radiance(const Ray& input_ray, Random* random)
     {
         HitRecord record = {};
 
-        if (!g_scene.hit(ray, record))
+        if (!scene->hit(ray, record))
         {
-            L += W * g_scene.sample_ibl(ray.dir);
+            //L += W * scene->sample_ibl(ray.dir);
             break;
         }
 
@@ -64,7 +76,7 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         // 打ち切り深度に達したら終わり.
         if(depth > g_max_depth)
         {
-            if (random->get_as_float() >= p)
+            if (random.get_as_float() >= p)
             {
                 break;
             }
@@ -77,7 +89,7 @@ Vector3 radiance(const Ray& input_ray, Random* random)
         ShadingArg arg = {};
         arg.input  = ray.dir;
         arg.normal = record.nrm;
-        arg.random = *random;
+        arg.random = random;
         arg.uv     = record.uv;
 
         // マテリアルの評価.
@@ -147,6 +159,23 @@ Vector3 radiance(const Ray& input_ray, Random* random)
     return L;
 }
 
+void task_func(TaskData* task, ThreadData* thread_data)
+{
+    for(auto y = 0; y < task->h; ++y)
+    for(auto x = 0; x < task->w; ++x)
+    {
+        thread_data->canvas->add(x, y,
+            radiance(
+                thread_data->scene->emit(float(x), float(y)),
+                thread_data->random,
+                thread_data->scene) * thread_data->inv_s);
+
+        if (*thread_data->is_finish)
+        { return; }
+    }
+}
+
+
 } // namespace
 
 
@@ -155,9 +184,6 @@ Vector3 radiance(const Ray& input_ray, Random* random)
 //-------------------------------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
-    Scene scn;
-    scn.save("test_scene.xml");
-
     if (argc <= 1)
     {
         if (!g_scene.load("test_scene.xml"))
@@ -179,9 +205,21 @@ int main(int argc, char** argv)
     int h = g_scene.height();
     int s = g_scene.samples();
 
-    r3d::Canvas canvas;
+    Canvas canvas;
     std::atomic<bool> is_finish      = false;   // 終了したかどうか?
     std::atomic<bool> request_finish = false;   // 終了要求フラグ.
+
+    // キャプチャディレクトリ作成.
+    _mkdir("img");
+
+    // CPUコア数を取得.
+    uint32_t core_count = std::thread::hardware_concurrency();
+
+    // 1個は監視スレッド用に開けておく.
+    if (core_count >= 2)
+    { core_count--; }
+
+    task_system<TaskData, ThreadData> task(core_count, task_func);
 
     // 監視スレッド.
     std::thread thd([&]()
@@ -194,15 +232,16 @@ int main(int argc, char** argv)
         printf_s("* width    : %d\n", w);
         printf_s("* height   : %d\n", h);
         printf_s("* samples  : %d\n", s);
+        printf_s("* cpu core : %d\n", core_count);
 
         while(!request_finish)
         {
             auto curr = std::chrono::system_clock::now();
-            auto term = std::chrono::duration_cast<std::chrono::seconds>(curr - begin).count();
+            auto term = std::chrono::duration_cast<std::chrono::milliseconds>(curr - begin).count();
             auto sec  = std::chrono::duration_cast<std::chrono::seconds>(curr - start).count();
 
             // 30秒ごとにキャプチャー.
-            if (term >= 30)
+            if (term >= 30000)
             {
                 canvas.write(counter++);
                 begin = curr;
@@ -231,63 +270,80 @@ int main(int argc, char** argv)
 
         is_finish = true;
         printf_s("end!\n");
+
+        task.request_exit();
     });
 
-    // キャプチャディレクトリ作成.
-    _mkdir("img");
-
-    #ifdef _OPENMP
-        // CPUコア数を取得.
-        int core_count = omp_get_num_procs();
-
-        // 1個は監視スレッド用に開けておく.
-        if (core_count >= 2)
-        { core_count--; }
-
-        printf_s("* cpu core : %d\n", core_count);
-    #endif//_OPENMP
 
     // レンダーターゲット生成.
     canvas.resize(w, h);
 
-    // 乱数初期化.
-    Random random(123456);
-
     auto inv_s = 1.0f / float(s);
     uint64_t ray_count = 0;
 
+    // スレッドデータ設定.
+    for(uint32_t i=0; i<core_count; ++i)
+    {
+        auto& data = task.thread_data(i);
+        data.canvas     = &canvas;
+        data.inv_s      = inv_s;
+        data.scene      = &g_scene;
+        data.is_finish  = &is_finish;
+        data.random.set_seed(i * 1000);
+    }
+
+    Random random(123456789);
+
+    // タスクを積む.
     for(auto loop = 0; loop < s; ++loop)
     {
-    #ifdef _OPENMP
-        #pragma omp parallel for schedule(dynamic, 1) num_threads(core_count)
-    #endif//_OPENMP
+        TaskData info;
+        info.w = w;
+        info.h = h;
+
+        task.enqueue(info);
+      
+        //for (auto y = 0; y < h; ++y)
+        //{
+        //    render_task task;
+        //    task.random.set_seed(loop);
+        //    task.canvas     = &canvas;
+        //    task.is_finish  = &is_finish;
+        //    task.inv_s      = inv_s;
+        //    task.scene      = &g_scene;
+        //    task.y          = y;
+        //    task.w          = w;
+        //    pool.enqueue(std::bind(&render_task::run, task, std::placeholders::_1));
+        //}
+
         for (auto y = 0; y < h; ++y)
         for (auto x = 0; x < w; ++x)
         {   
             // Let's レイトレ！
-            canvas.add(x, y, radiance(g_scene.emit(float(x), float(y)), &random) * inv_s);
+            canvas.add(x, y, radiance(g_scene.emit(float(x), float(y)), random, &g_scene) * inv_s);
 
             ray_count++;
 
             if (is_finish)
             { break; }
         }
-
-        if (is_finish)
-        {
-            printf_s("rendering imcompleted...\n");
-            printf_s("%.2f%% complted.\n", (loop * inv_s * 100.0f));
-            break;
-        }
     }
 
-    printf_s("%llu ray generated.\n", ray_count);
+    //// タスク実行.
+    //task.run();
+
+    //// 時間終了まで待つ.
+    //task.wait();
+
+    //printf_s("%llu ray generated.\n", ray_count);
 
     // 終了フラグを立てる.
     request_finish = true;
 
+
     // スレッドの終了を待機.
-    thd.join();
+    if (thd.joinable())
+    { thd.join(); }
 
     return 0;
 }

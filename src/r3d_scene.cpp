@@ -356,11 +356,11 @@ struct ResScene
         sphere3.pos         = Vector3(50.0f, 40.8f, -1e5f + 170.0f);
         sphere3.material_id = lambert3.id;
 
-        //ResSphere sphere4 = {};
-        //sphere4.id          = id++;
-        //sphere4.radius      = 1e5f;
-        //sphere4.pos         = Vector3(50.0f, 1e5f, 81.6f);
-        //sphere4.material_id = lambert2.id;
+        ResSphere sphere4 = {};
+        sphere4.id          = id++;
+        sphere4.radius      = 1e5f;
+        sphere4.pos         = Vector3(50.0f, 1e5f, 81.6f);
+        sphere4.material_id = lambert2.id;
 
         ResSphere sphere5= {};
         sphere5.id          = id++;
@@ -380,21 +380,21 @@ struct ResScene
         sphere7.pos         = Vector3(73.0f, 16.5f, 78.0f);
         sphere7.material_id = refract0.id;
 
-        //ResSphere sphere8 = {};
-        //sphere8.id          = id++;
-        //sphere8.radius      = 5.0f;
-        //sphere8.pos         = Vector3(50.0f, 81.6f, 81.6f);
-        //sphere8.material_id = lambert4.id;
+        ResSphere sphere8 = {};
+        sphere8.id          = id++;
+        sphere8.radius      = 5.0f;
+        sphere8.pos         = Vector3(50.0f, 81.6f, 81.6f);
+        sphere8.material_id = lambert4.id;
 
         sphere_shapes.push_back(sphere0);
         sphere_shapes.push_back(sphere1);
         sphere_shapes.push_back(sphere2);
         sphere_shapes.push_back(sphere3);
-        //sphere_shapes.push_back(sphere4);
+        sphere_shapes.push_back(sphere4);
         sphere_shapes.push_back(sphere5);
         sphere_shapes.push_back(sphere6);
         sphere_shapes.push_back(sphere7);
-        //sphere_shapes.push_back(sphere8);
+        sphere_shapes.push_back(sphere8);
 
         ResCamera camera = {};
         camera.pos      = Vector3(50.0f, 52.0f, 295.6f);

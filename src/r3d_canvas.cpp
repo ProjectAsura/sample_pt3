@@ -74,7 +74,6 @@ void CalcLogAve
 } // namespace 
 
 
-namespace r3d {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Canvas class
@@ -332,4 +331,3 @@ void Canvas::median_filter()
     }
 }
 
-} // namespace s3d

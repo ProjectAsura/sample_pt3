@@ -156,7 +156,7 @@
 				<id>5</id>
 				<pos>
 					<x>50</x>
-					<y>-99918.3984375</y>
+					<y>100000</y>
 					<z>81.599998474121094</z>
 				</pos>
 				<radius>100000</radius>
@@ -165,15 +165,25 @@
 			<value5>
 				<id>6</id>
 				<pos>
+					<x>50</x>
+					<y>-99918.3984375</y>
+					<z>81.599998474121094</z>
+				</pos>
+				<radius>100000</radius>
+				<material_id>3</material_id>
+			</value5>
+			<value6>
+				<id>7</id>
+				<pos>
 					<x>27</x>
 					<y>16.5</y>
 					<z>47</z>
 				</pos>
 				<radius>16.5</radius>
 				<material_id>6</material_id>
-			</value5>
-			<value6>
-				<id>7</id>
+			</value6>
+			<value7>
+				<id>8</id>
 				<pos>
 					<x>73</x>
 					<y>16.5</y>
@@ -181,7 +191,17 @@
 				</pos>
 				<radius>16.5</radius>
 				<material_id>7</material_id>
-			</value6>
+			</value7>
+			<value8>
+				<id>9</id>
+				<pos>
+					<x>50</x>
+					<y>81.599998474121094</y>
+					<z>81.599998474121094</z>
+				</pos>
+				<radius>5</radius>
+				<material_id>5</material_id>
+			</value8>
 		</sphere_shapes>
 		<cameras size="dynamic">
 			<value0>
