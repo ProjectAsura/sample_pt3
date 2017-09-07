@@ -629,19 +629,5 @@ bool Scene::hit(const Ray& ray, HitRecord& record) const
     return hit;
 }
 
-bool Scene::hit(const Ray& ray, ShadowRecord& record) const
-{
-    record.dist  = F_MAX;
-    record.shape = nullptr;
-    record.mat   = nullptr;
-
-    bool hit = false;
-
-    for(size_t i=0; i<m_objs.size(); ++i)
-    { hit |= m_objs[i]->shadow_hit(ray, record); }
-
-    return hit;
-}
-
 Vector3 Scene::sample_ibl(const Vector3& dir) const
 { return m_ibl->sample3d(dir); }

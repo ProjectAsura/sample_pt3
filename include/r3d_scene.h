@@ -29,7 +29,6 @@ public:
     void dispose();
     Ray  emit(float x, float y) const;
     bool hit(const Ray& ray, HitRecord& record) const;
-    bool hit(const Ray& ray, ShadowRecord& record) const;
     Vector3 sample_ibl(const Vector3& dir) const;
 
     int width  () const { return m_w; }

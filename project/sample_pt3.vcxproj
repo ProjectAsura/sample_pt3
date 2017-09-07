@@ -185,7 +185,7 @@
     <ClInclude Include="..\include\r3d_shape.h" />
     <ClInclude Include="..\include\r3d_task.h" />
     <ClInclude Include="..\include\r3d_texture.h" />
-    <ClInclude Include="..\include\r3d_thread.h" />
+    <ClInclude Include="..\src\smd.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

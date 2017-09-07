@@ -63,7 +63,6 @@ struct Shape
 {
     virtual ~Shape() {}
     virtual bool hit(const Ray& ray, HitRecord& record) const = 0;
-    virtual bool shadow_hit(const Ray& ray, ShadowRecord& record) const = 0;
     virtual void sample(Random& random, Vector3& pos, Vector3& nrm) const = 0;
 };
 
@@ -84,32 +83,6 @@ public:
         instance->pos    = pos;
         instance->mat    = mat;
         return instance;
-    }
-
-    inline bool shadow_hit(const Ray& ray,ShadowRecord& record) const override
-    {
-        auto p = pos - ray.pos;
-        auto b = dot(p, ray.dir);
-        auto det = b * b - dot(p, p) + radius * radius;
-        if (det < 0.0f)
-        { return false; }
-
-        auto sqrt_det = sqrt(det);
-        auto t1 = b - sqrt_det;
-        auto t2 = b + sqrt_det;
-        if (t1 < F_HIT_MIN && t2 < F_HIT_MIN)
-        { return false; }
-
-        auto dist = ( t1 > F_HIT_MIN ) ? t1 : t2;
-        if ( dist > record.dist )
-        { return false; }
-
-        record.dist  = dist;
-        record.mat   = mat;
-        record.pdf   = 1.0f / (4.0f * F_PI * radius * radius);
-        record.shape = this;
- 
-        return true;
     }
 
     inline bool hit(const Ray& ray, HitRecord& record) const override
@@ -179,39 +152,6 @@ public:
         instance->m_edge[1] = vtx[2].pos - vtx[0].pos;
         instance->m_edge[2] = vtx[2].pos - vtx[1].pos;
         return instance;
-    }
-
-    inline bool shadow_hit(const Ray& ray, ShadowRecord& record) const override
-    {
-        auto s1  = cross( ray.dir, m_edge[1] );
-        auto div = dot( s1, m_edge[0] );
-
-        if ( fabs(div) <= F_EPSILON )
-        { return false; }
-
-        auto d = ray.pos - m_vtx[0].pos;
-        auto beta = dot( d, s1 ) / div;
-        if ( beta <= 0.0 || beta >= 1.0 )
-        { return false; }
-
-        auto s2 = cross( d, m_edge[0] );
-        auto gamma = dot( ray.dir, s2 ) / div;
-        if ( gamma <= 0.0 || ( beta + gamma ) >= 1.0 )
-        { return false; }
-
-        auto t = dot( m_edge[1], s2 ) / div;
-        if ( t < F_HIT_MIN || t > F_HIT_MAX )
-        { return false; }
-
-        if ( t >= record.dist )
-        { return false; }
-
-        record.dist  = t;
-        record.mat   = m_mat;
-        record.shape = this;
-        record.pdf   = 1.0f;
-
-        return true;
     }
 
     inline bool hit(const Ray& ray, HitRecord& record) const override
@@ -292,18 +232,6 @@ public:
         return instance;
     }
 
-    inline bool shadow_hit(const Ray& ray, ShadowRecord& record) const override
-    {
-        auto pos = mul_coord ( ray.pos, m_inv_world );
-        auto dir = mul_normal( ray.dir, m_inv_world );
-        auto localRaySet = Ray( pos, normalize(dir) );
-
-        if ( m_shape->shadow_hit( localRaySet, record ) )
-        { return true; }
-
-        return false;
-    }
-
     inline bool hit(const Ray& ray, HitRecord& record) const override
     {
         auto pos = mul_coord ( ray.pos, m_inv_world );
@@ -342,7 +270,6 @@ class Mesh : public Shape
 {
 public:
     static Mesh* create(const char* filename);
-    bool shadow_hit(const Ray& ray, ShadowRecord& record) const override;
     bool hit(const Ray& ray, HitRecord& record) const override;
     void sample(Random& random, Vector3& sample_pos, Vector3& sample_nrm) const override;
 
