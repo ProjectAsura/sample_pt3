@@ -194,6 +194,21 @@ struct ResShapeInstance
     }
 };
 
+struct ResMesh
+{
+    int         id;
+    std::string path;
+
+    template<class Archive>
+    void serialize(Archive& archive)
+    {
+        archive(
+            CEREAL_NVP(id),
+            CEREAL_NVP(path)
+        );
+    }
+};
+
 struct ResCamera
 {
     Vector3     pos;
@@ -254,6 +269,7 @@ struct ResScene
     std::vector<ResPhong>           phongs;
     std::vector<ResSphere>          sphere_shapes;
     std::vector<ResShapeInstance>   instance_shapes;
+    std::vector<ResMesh>            mesh_shapes;
     std::vector<ResCamera>          cameras;
     std::string                     ibl_path;
 
@@ -270,6 +286,8 @@ struct ResScene
             CEREAL_NVP(refracts),
             CEREAL_NVP(phongs),
             CEREAL_NVP(sphere_shapes),
+            CEREAL_NVP(mesh_shapes),
+            CEREAL_NVP(instance_shapes),
             CEREAL_NVP(cameras),
             CEREAL_NVP(ibl_path)
         );
@@ -316,12 +334,12 @@ struct ResScene
         lamberts.push_back(lambert3);
         lamberts.push_back(lambert4);
 
-        ResMirror mirror0 = {};
-        mirror0.id      = id++;
-        mirror0.color   = Vector3(0.75f, 0.25f, 0.25f);
-        mirror0.emissive = Vector3(0.0f, 0.0f, 0.0f);
+        //ResMirror mirror0 = {};
+        //mirror0.id      = id++;
+        //mirror0.color   = Vector3(0.75f, 0.25f, 0.25f);
+        //mirror0.emissive = Vector3(0.0f, 0.0f, 0.0f);
 
-        mirrors.push_back(mirror0);
+        //mirrors.push_back(mirror0);
 
         ResRefract refract0 = {};
         refract0.id    = id++;
@@ -368,11 +386,11 @@ struct ResScene
         sphere5.pos         = Vector3(50.0f, -1e5f + 81.6f, 81.6f);
         sphere5.material_id = lambert2.id;
 
-        ResSphere sphere6 = {};
-        sphere6.id          = id++;
-        sphere6.radius      = 16.5f;
-        sphere6.pos         = Vector3(27.0f, 16.5f, 47.0f);
-        sphere6.material_id = mirror0.id;
+        //ResSphere sphere6 = {};
+        //sphere6.id          = id++;
+        //sphere6.radius      = 16.5f;
+        //sphere6.pos         = Vector3(27.0f, 16.5f, 47.0f);
+        //sphere6.material_id = mirror0.id;
 
         ResSphere sphere7 = {};
         sphere7.id          = id++;
@@ -392,9 +410,15 @@ struct ResScene
         sphere_shapes.push_back(sphere3);
         sphere_shapes.push_back(sphere4);
         sphere_shapes.push_back(sphere5);
-        sphere_shapes.push_back(sphere6);
+        //sphere_shapes.push_back(sphere6);
         sphere_shapes.push_back(sphere7);
         sphere_shapes.push_back(sphere8);
+
+        ResMesh mesh0;
+        mesh0.id = id++;
+        mesh0.path = "domo.smd";
+
+        mesh_shapes.push_back(mesh0);
 
         ResCamera camera = {};
         camera.pos      = Vector3(50.0f, 52.0f, 295.6f);
@@ -507,6 +531,17 @@ bool Scene::load(const char* filename)
                 auto id = m_objs.size();
                 m_objs.push_back(shape);
                 shapeid_dic[res.sphere_shapes[i].id] = id;
+            }
+        }
+
+        if (!res.mesh_shapes.empty())
+        {
+            for(size_t i=0; i<res.mesh_shapes.size(); ++i)
+            {
+                auto shape = Mesh::create(res.mesh_shapes[i].path.c_str());
+                auto id    = m_objs.size();
+                m_objs.push_back(shape);
+                shapeid_dic[res.mesh_shapes[i].id] = id;
             }
         }
 

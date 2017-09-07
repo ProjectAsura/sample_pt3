@@ -20,6 +20,7 @@ struct Material;
 struct Shape;
 struct BVH4;
 struct BVH8;
+class Texture;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -63,7 +64,6 @@ struct Shape
 {
     virtual ~Shape() {}
     virtual bool hit(const Ray& ray, HitRecord& record) const = 0;
-    virtual void sample(Random& random, Vector3& pos, Vector3& nrm) const = 0;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,22 +117,6 @@ public:
         record.mat   = mat;
 
         return true;
-    }
-
-    void sample(Random& random, Vector3& sample_pos, Vector3& sample_nrm) const override
-    {
-        const auto r1 = F_2PI * random.get_as_float();
-        const auto r2 = 1.0f - 2.0f * random.get_as_float();
-        const auto r3 = sqrt(1.0f - r2 * r2);
-
-        const auto dir = normalize(Vector3(
-            r3 * cos(r1),
-            r3 * sin(r1),
-            r2
-        ));
-
-        sample_pos = pos + dir * (radius + F_HIT_MIN);
-        sample_nrm = normalize(sample_pos - pos);
     }
 };
 
@@ -197,19 +181,8 @@ public:
         return true;
     }
 
-    void sample(Random& random, Vector3& sample_pos, Vector3& sample_nrm) const override
-    {
-        auto a = random.get_as_float();
-        auto b = random.get_as_float();
-        if (a + b > 1.0)
-        {
-            a = 1.0f - a;
-            b = 1.0f - b;
-        }
-
-        sample_pos = m_vtx[0].pos + m_edge[0] * a + m_edge[1] * b;
-        sample_nrm = normalize(cross(m_edge[0], m_edge[1]));
-    }
+    const Vertex& vertex(uint32_t index) const
+    { return m_vtx[index]; }
 
 private:
     const Vertex*   m_vtx;
@@ -248,15 +221,6 @@ public:
         return false;
     }
 
-    void sample(Random& random, Vector3& sample_pos, Vector3& sample_nrm) const override
-    {
-        Vector3 pos;
-        Vector3 nrm;
-        m_shape->sample(random, pos, nrm);
-        sample_pos = mul(pos, m_world);
-        sample_nrm = mul_normal(nrm, m_inv_world);
-    }
-
 private:
     Shape* m_shape;
     Matrix m_world;
@@ -271,12 +235,12 @@ class Mesh : public Shape
 public:
     static Mesh* create(const char* filename);
     bool hit(const Ray& ray, HitRecord& record) const override;
-    void sample(Random& random, Vector3& sample_pos, Vector3& sample_nrm) const override;
 
 private:
     std::vector<Vertex>     m_vtxs;
     std::vector<Material*>  m_mats;
     std::vector<Triangle*>  m_tris;
+    std::vector<Texture*>   m_texs;
     BVH8*                   m_bvh;
 
     bool load(const char* filename);

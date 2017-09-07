@@ -86,7 +86,6 @@ struct SMD_TEXTURE
 
 
 /* 
-
   SMD_DATA は下記の順番で格納.
 
   SMD_FILE_HEADER
@@ -94,5 +93,4 @@ struct SMD_TEXTURE
   SMD_TEXTURE[]
   SMD_MATERIAL[]
   SMD_TRIANGLE[]
-
 */

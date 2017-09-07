@@ -184,7 +184,6 @@ struct Ray
     { /* DO_NOTHING */ }
 };
 
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Random class
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -392,6 +391,40 @@ inline Vector3 lerp(const Vector3& a, const Vector3& b, float t)
     );
 }
 
+inline Vector2 max(const Vector2& lhs, const Vector2& rhs)
+{
+    return Vector2(
+        max(lhs.x, rhs.x),
+        max(lhs.y, rhs.y)
+    );
+}
+
+inline Vector3 max(const Vector3& lhs, const Vector3& rhs)
+{
+    return Vector3(
+        max(lhs.x, rhs.x),
+        max(lhs.y, rhs.y),
+        max(lhs.z, rhs.z)
+    );
+}
+
+inline Vector2 min(const Vector2& lhs, const Vector2& rhs)
+{
+    return Vector2(
+        min(lhs.x, rhs.x),
+        min(lhs.y, rhs.y)
+    );
+}
+
+inline Vector3 min(const Vector3& lhs, const Vector3& rhs)
+{
+    return Vector3(
+        min(lhs.x, rhs.x),
+        min(lhs.y, rhs.y),
+        min(lhs.z, rhs.z)
+    );
+}
+
 inline bool is_zero(const Vector2& value)
 { return is_zero(value.x) && is_zero(value.y); }
 
@@ -578,3 +611,313 @@ struct Onb
         return *this;
     }
 };
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Box structure
+///////////////////////////////////////////////////////////////////////////////////////////////////
+struct Box
+{
+    Vector3 mini;
+    Vector3 maxi;
+
+    Box()
+    : mini( F_MAX,  F_MAX,  F_MAX)
+    , maxi(-F_MAX, -F_MAX, -F_MAX)
+    { /* DO_NOTHING */ }
+
+    Box(const Vector3& minimum, const Vector3& maximum)
+    : mini(minimum)
+    , maxi(maximum)
+    { /* DO_NOTHING */ }
+};
+
+inline bool hit(const Ray& ray, const Box& box)
+{
+    float t0, t1, n, f;
+    float t_min = -F_HIT_MAX;
+    float t_max =  F_HIT_MAX;
+
+    t0 = (box.mini.x - ray.pos.x) / ray.dir.x;
+    t1 = (box.maxi.x - ray.pos.x) / ray.dir.x;
+
+    n = min(t0, t1);
+    f = max(t0, t1);
+
+    t_min = max(t_min, n);
+    t_max = min(t_max, f);
+
+    if (t_min > t_max)
+    { return false; }
+
+    t0 = (box.mini.y - ray.pos.y) / ray.dir.y;
+    t1 = (box.maxi.y - ray.pos.y) / ray.dir.y;
+
+    n = min(t0, t1);
+    f = max(t0, t1);
+
+    t_min = max(t_min, n);
+    t_max = min(t_max, f);
+
+    if (t_min > t_max)
+    { return false; }
+
+    t0 = (box.mini.z - ray.pos.z) / ray.dir.z;
+    t1 = (box.maxi.z - ray.pos.z) / ray.dir.z;
+
+    n = min(t0, t1);
+    f = max(t0, t1);
+
+    t_min = max(t_min, n);
+    t_max = min(t_max, f);
+
+    if (t_min > t_max)
+    { return false; }
+
+    return true;
+}
+
+inline Box merge(const Box& lhs, const Box& rhs)
+{
+    Box result;
+    result.maxi.x = max(lhs.maxi.x, rhs.maxi.x);
+    result.maxi.y = max(lhs.maxi.y, rhs.maxi.y);
+    result.maxi.z = max(lhs.maxi.z, rhs.maxi.z);
+
+    result.mini.x = min(lhs.mini.x, rhs.mini.x);
+    result.mini.y = min(lhs.mini.y, rhs.mini.y);
+    result.mini.z = min(lhs.mini.z, rhs.mini.z);
+
+    return result;
+}
+
+inline Box merge(const Box& lhs, const Vector3& rhs)
+{
+    Box result;
+    result.maxi.x = max(lhs.maxi.x, rhs.x);
+    result.maxi.y = max(lhs.maxi.y, rhs.y);
+    result.maxi.z = max(lhs.maxi.z, rhs.z);
+
+    result.mini.x = min(lhs.mini.x, rhs.x);
+    result.mini.y = min(lhs.mini.y, rhs.y);
+    result.mini.z = min(lhs.mini.z, rhs.z);
+
+    return result;
+}
+
+inline Box merge(const Vector3& lhs, const Box& rhs)
+{
+    Box result;
+    result.maxi.x = max(lhs.x, rhs.maxi.x);
+    result.maxi.y = max(lhs.y, rhs.maxi.y);
+    result.maxi.z = max(lhs.z, rhs.maxi.z);
+
+    result.mini.x = min(lhs.x, rhs.mini.x);
+    result.mini.y = min(lhs.y, rhs.mini.y);
+    result.mini.z = min(lhs.z, rhs.mini.z);
+
+    return result;
+}
+
+inline Box mul(const Box& box, const Matrix& matrix)
+{
+    auto mini = mul(box.mini, matrix);
+    auto maxi = mul(box.maxi, matrix);
+    return Box(mini, maxi);
+}
+
+#if defined(ENABLE_SSE2)
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Ray4 structure
+///////////////////////////////////////////////////////////////////////////////////////////////////
+struct Ray4
+{
+    __m128  pos[3];
+    __m128  dir[3];
+};
+
+inline Ray4 convert(const Ray& ray)
+{
+    Ray4 result = {};
+    result.pos[0] = _mm_set1_ps( ray.pos.x );
+    result.pos[1] = _mm_set1_ps( ray.pos.y );
+    result.pos[2] = _mm_set1_ps( ray.pos.z );
+
+    result.dir[0] = _mm_set1_ps( ray.dir.x );
+    result.dir[1] = _mm_set1_ps( ray.dir.y );
+    reuslt.dir[2] = _mm_set1_ps( ray.dir.z );
+
+    return result;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Box4 structure
+///////////////////////////////////////////////////////////////////////////////////////////////////
+struct Box4
+{
+    __m128 mini[3];
+    __m128 maxi[3];
+
+    Box4()
+    {
+        mini[0] = _mm_set1_ps( F_MAX );
+        mini[1] = _mm_set1_ps( F_MAX );
+        mini[2] = _mm_set1_ps( F_MAX );
+
+        maxi[0] = _mm_set1_ps( -F_MAX );
+        maxi[1] = _mm_set1_ps( -F_MAX );
+        maxi[2] = _mm_set1_ps( -F_MAX );
+    }
+
+    Box4(const Box& b0, const Box& b1, const Box& b2, const Box& b3)
+    {
+        mini[0] = _mm_set_ps( b3.mini.x, b2.mini.x, b1.mini.x, b0.mini.x );
+        mini[1] = _mm_set_ps( b3.mini.y, b2.mini.y, b1.mini.y, b0.mini.y );
+        mini[2] = _mm_set_ps( b3.mini.z, b2.mini.z, b1.mini.z, b0.mini.z );
+
+        maxi[0] = _mm_set_ps( b3.maxi.x, b2.maxi.x, b1.maxi.x, b0.maxi.x );
+        maxi[1] = _mm_set_ps( b3.maxi.y, b2.maxi.y, b1.maxi.y, b0.maxi.y );
+        maxi[2] = _mm_set_ps( b3.maxi.z, b2.maxi.z, b1.maxi.z, b0.maxi.z );
+    }
+};
+
+inline bool hit(const Ray4& ray, const Box4& box, int& mask)
+{
+    __m128 t_min = _mm_set1_ps( -F_HIT_MAX );
+    __m128 t_max = _mm_set1_ps(  F_HIT_MAX );
+
+    __m128 t0;
+    __m128 t1;
+    __m128 n;
+    __m128 f;
+
+    t0 = _mm_div_ps( _mm_sub_ps(box.mini[0], ray.pos[0]), ray.dir[0] );
+    t1 = _mm_div_ps( _mm_sub_ps(box.maxi[0], ray.pos[0]), ray.dir[0] );
+
+    n = _mm_min_ps( t0, t1 );
+    f = _mm_max_ps( t0, t1 );
+
+    t_min = _mm_max_ps( t_min, n );
+    t_max = _mm_min_ps( t_max, f );
+
+    t0 = _mm_div_ps( _mm_sub_ps(box.mini[1], ray.pos[1]), ray.dir[1] );
+    t1 = _mm_div_ps( _mm_sub_ps(box.maxi[1], ray.pos[1]), ray.dir[1] );
+
+    n = _mm_min_ps( t0, t1 );
+    f = _mm_max_ps( t0, t1 );
+
+    t_min = _mm_max_ps( t_min, n );
+    t_max = _mm_min_ps( t_max, f );
+
+    t0 = _mm_div_ps( _mm_sub_ps(box.mini[2], ray.pos[2]), ray.dir[2] );
+    t1 = _mm_div_ps( _mm_sub_ps(box.maxi[2], ray.pos[2]), ray.dir[2] );
+
+    n = _mm_min_ps( t0, t1 );
+    f = _mm_max_ps( t0, t1 );
+
+    t_min = _mm_max_ps( t_min, n );
+    t_max = _mm_min_ps( t_max, f );
+
+    mask = _mm_movemask_ps( _mm_cmpge_ps( t_max, t_min ) );
+    return mask > 0;
+}
+#endif//defined(ENABLE_SSE2)
+
+
+#if defined(ENABLE_AVX)
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Ray8 structure
+///////////////////////////////////////////////////////////////////////////////////////////////////
+struct Ray8
+{
+    __m256 pos[3];
+    __m256 dir[3];
+};
+
+inline Ray8 convert(const Ray& ray)
+{
+    Ray8 result;
+    result.pos[0] = _mm256_set1_ps( ray.pos.x );
+    result.pos[1] = _mm256_set1_ps( ray.pos.y );
+    result.pos[2] = _mm256_set1_ps( ray.pos.z );
+
+    result.dir[0] = _mm256_set1_ps( ray.dir.x );
+    result.dir[1] = _mm256_set1_ps( ray.dir.y );
+    result.dir[2] = _mm256_set1_ps( ray.dir.z );
+
+    return result;
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Box8 structure
+///////////////////////////////////////////////////////////////////////////////////////////////////
+struct Box8
+{
+    __m256 mini[3];
+    __m256 maxi[3];
+
+    Box8()
+    {
+        mini[0] = _mm256_set1_ps( F_MAX );
+        mini[1] = _mm256_set1_ps( F_MAX );
+        mini[2] = _mm256_set1_ps( F_MAX );
+
+        maxi[0] = _mm256_set1_ps( -F_MAX );
+        maxi[1] = _mm256_set1_ps( -F_MAX );
+        maxi[2] = _mm256_set1_ps( -F_MAX );
+    }
+
+    Box8(const Box& b0, const Box& b1, const Box& b2, const Box& b3,
+         const Box& b4, const Box& b5, const Box& b6, const Box& b7)
+    {
+        mini[0] = _mm256_set_ps( b7.mini.x, b6.mini.x, b5.mini.x, b4.mini.x, b3.mini.x, b2.mini.x, b1.mini.x, b0.mini.x );
+        mini[1] = _mm256_set_ps( b7.mini.y, b6.mini.y, b5.mini.y, b4.mini.y, b3.mini.y, b2.mini.y, b1.mini.y, b0.mini.y );
+        mini[2] = _mm256_set_ps( b7.mini.z, b6.mini.z, b5.mini.z, b4.mini.z, b3.mini.z, b2.mini.z, b1.mini.z, b0.mini.z );
+
+        maxi[0] = _mm256_set_ps( b7.maxi.x, b6.maxi.x, b5.maxi.x, b4.maxi.x, b3.maxi.x, b2.maxi.x, b1.maxi.x, b0.maxi.x );
+        maxi[1] = _mm256_set_ps( b7.maxi.y, b6.maxi.y, b5.maxi.y, b4.maxi.y, b3.maxi.y, b2.maxi.y, b1.maxi.y, b0.maxi.y );
+        maxi[2] = _mm256_set_ps( b7.maxi.z, b6.maxi.z, b5.maxi.z, b4.maxi.z, b3.maxi.z, b2.maxi.z, b1.maxi.z, b0.maxi.z );
+    }
+};
+
+inline bool hit(const Ray8& ray, const Box8& box, int& mask)
+{
+    __m256 t_min = _mm256_set1_ps( -F_HIT_MAX );
+    __m256 t_max = _mm256_set1_ps(  F_HIT_MAX );
+
+    __m256 t0;
+    __m256 t1;
+    __m256 n;
+    __m256 f;
+
+    t0 = _mm256_div_ps( _mm256_sub_ps(box.mini[0], ray.pos[0]), ray.dir[0] );
+    t1 = _mm256_div_ps( _mm256_sub_ps(box.maxi[0], ray.pos[0]), ray.dir[0] );
+
+    n = _mm256_min_ps( t0, t1 );
+    f = _mm256_max_ps( t0, t1 );
+
+    t_min = _mm256_max_ps( t_min, n );
+    t_max = _mm256_min_ps( t_max, f );
+
+    t0 = _mm256_div_ps( _mm256_sub_ps(box.mini[1], ray.pos[1]), ray.dir[1] );
+    t1 = _mm256_div_ps( _mm256_sub_ps(box.maxi[1], ray.pos[1]), ray.dir[1] );
+
+    n = _mm256_min_ps( t0, t1 );
+    f = _mm256_max_ps( t0, t1 );
+
+    t_min = _mm256_max_ps( t_min, n );
+    t_max = _mm256_min_ps( t_max, f );
+
+    t0 = _mm256_div_ps( _mm256_sub_ps(box.mini[2], ray.pos[2]), ray.dir[2] );
+    t1 = _mm256_div_ps( _mm256_sub_ps(box.maxi[2], ray.pos[2]), ray.dir[2] );
+
+    n = _mm256_min_ps( t0, t1 );
+    f = _mm256_max_ps( t0, t1 );
+
+    t_min = _mm256_max_ps( t_min, n );
+    t_max = _mm256_min_ps( t_max, f );
+
+    mask = _mm256_movemask_ps( _mm256_cmp_ps( t_max, t_min, _CMP_GE_OS ) );
+
+    return mask > 0;
+}
+#endif//defined(ENABLE_AVX)

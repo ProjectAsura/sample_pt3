@@ -37,6 +37,7 @@ void SafeDeleteArray(T*& ptr)
 using namespace std;
 
 //const float F_PI = 3.1415926535f;
+const char* kEmpty = "";
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -153,7 +154,7 @@ const char* GetDirectoryPath( const char* filename )
         return temp.substr(0, pos).c_str();
     }
 
-    return nullptr;
+    return kEmpty;
 }
 
 //-----------------------------------------------------------------------
@@ -185,6 +186,9 @@ const char* CutDirectoryPath( const char* filename )
 //-----------------------------------------------------------------------
 const char* SetDirectoryPath( char* dest, char* directory )
 {
+    if (strlen(directory) == 0)
+    { return dest; }
+
     std::string temp(directory);
     temp += dest;
     return temp.c_str();

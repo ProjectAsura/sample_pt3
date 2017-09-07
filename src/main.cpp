@@ -184,6 +184,9 @@ void task_func(TaskData* task, ThreadData* thread_data)
 //-------------------------------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
+    Scene scn;
+    scn.save("test_scene.xml");
+
     if (argc <= 1)
     {
         if (!g_scene.load("test_scene.xml"))
