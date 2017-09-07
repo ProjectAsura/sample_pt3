@@ -89,7 +89,7 @@ Vector3 radiance(const Ray& input_ray, Random& random, const Scene* scene)
         ShadingArg arg = {};
         arg.input  = ray.dir;
         arg.normal = record.nrm;
-        arg.random = random;
+        arg.random = &random;
         arg.uv     = record.uv;
 
         // マテリアルの評価.
@@ -274,7 +274,6 @@ int main(int argc, char** argv)
         task.request_exit();
     });
 
-
     // レンダーターゲット生成.
     canvas.resize(w, h);
 
@@ -292,8 +291,6 @@ int main(int argc, char** argv)
         data.random.set_seed(i * 1000);
     }
 
-    Random random(123456789);
-
     // タスクを積む.
     for(auto loop = 0; loop < s; ++loop)
     {
@@ -302,44 +299,16 @@ int main(int argc, char** argv)
         info.h = h;
 
         task.enqueue(info);
-      
-        //for (auto y = 0; y < h; ++y)
-        //{
-        //    render_task task;
-        //    task.random.set_seed(loop);
-        //    task.canvas     = &canvas;
-        //    task.is_finish  = &is_finish;
-        //    task.inv_s      = inv_s;
-        //    task.scene      = &g_scene;
-        //    task.y          = y;
-        //    task.w          = w;
-        //    pool.enqueue(std::bind(&render_task::run, task, std::placeholders::_1));
-        //}
-
-        for (auto y = 0; y < h; ++y)
-        for (auto x = 0; x < w; ++x)
-        {   
-            // Let's レイトレ！
-            canvas.add(x, y, radiance(g_scene.emit(float(x), float(y)), random, &g_scene) * inv_s);
-
-            ray_count++;
-
-            if (is_finish)
-            { break; }
-        }
     }
 
-    //// タスク実行.
-    //task.run();
+    // タスク実行.
+    task.run();
 
-    //// 時間終了まで待つ.
-    //task.wait();
-
-    //printf_s("%llu ray generated.\n", ray_count);
+    // 時間終了まで待つ.
+    task.wait();
 
     // 終了フラグを立てる.
     request_finish = true;
-
 
     // スレッドの終了を待機.
     if (thd.joinable())

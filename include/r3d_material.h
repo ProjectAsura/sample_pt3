@@ -21,7 +21,7 @@ struct ShadingArg
     Vector3     output;         // 出射方向         [out].
     Vector3     normal;         // 法線ベクトル      [in].
     Vector2     uv;             // テクスチャ座標    [in].
-    Random      random;         // 乱数             [in, out].
+    Random*     random;         // 乱数             [in, out].
     float       pdf;            // BRDFの確率密度   [out].
 };
 
@@ -88,8 +88,8 @@ public:
         Onb onb;
         onb.FromW(normal);
 
-        const auto r1 = F_2PI * arg.random.get_as_float();
-        const auto r2 = arg.random.get_as_float();
+        const auto r1 = F_2PI * arg.random->get_as_float();
+        const auto r2 = arg.random->get_as_float();
         const auto r2s = sqrt(r2);
 
         // 出射方向.
@@ -218,7 +218,7 @@ public:
         const auto Tr = 1.0f - Re;
         const auto prob = 0.25f + 0.5f * Re;
 
-        if (arg.random.get_as_float() < prob)
+        if (arg.random->get_as_float() < prob)
         {
             arg.output = reflect(arg.input, arg.normal);
             return m_albedo * Re / prob;
@@ -274,8 +274,8 @@ public:
         // 物体からのレイの入出を考慮した法線ベクトル.
         auto normal = (dot(arg.normal, arg.input) < 0.0f) ? arg.normal : -arg.normal;
 
-        const auto phi = F_2PI * arg.random.get_as_float();
-        const auto cos_theta = pow( 1.0f - arg.random.get_as_float(), 1.0f / (m_shininess + 1.0f) );
+        const auto phi = F_2PI * arg.random->get_as_float();
+        const auto cos_theta = pow( 1.0f - arg.random->get_as_float(), 1.0f / (m_shininess + 1.0f) );
         const auto sin_theta = sqrt( 1.0f - (cos_theta * cos_theta) );
         const auto x = cos( phi ) * sin_theta;
         const auto y = sin( phi ) * sin_theta;
