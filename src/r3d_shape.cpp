@@ -30,17 +30,20 @@ Mesh* Mesh::create(const char* filename)
 }
 
 
-bool Mesh::hit(const Ray& ray, HitRecord& record) const
-{
-    //bool hit = false;
-    //for(size_t i=0; i<m_tris.size(); ++i)
-    //{
-    //    hit |= m_tris[i]->hit(ray, record);
-    //}
+Mesh::Mesh()
+{ /* DO_NOTHING */ }
 
-    //return hit;
-    return m_bvh->intersect(ray, record);
+Mesh::~Mesh()
+{
+    if (m_bvh != nullptr)
+    {
+        m_bvh->dispose();
+        m_bvh = nullptr;
+    }
 }
+
+bool Mesh::hit(const Ray& ray, HitRecord& record) const
+{ return m_bvh->intersect(ray, record); }
 
 bool Mesh::load(const char* filename)
 {
@@ -138,7 +141,13 @@ bool Mesh::load(const char* filename)
 
     fclose(file);
 
-    m_bvh = BVH::build(m_tris);
+    #if defined(ENABLE_AVX)
+        m_bvh = BVH8::build(m_tris);
+    #elif defined(ENABLE_SSE2)
+        m_bvh = BVH4::build(m_tris);
+    #else
+        m_bvh = BVH::build(m_tris);
+    #endif
 
     return true;
 }

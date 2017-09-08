@@ -259,7 +259,17 @@ private:
     std::vector<Material*>  m_mats;
     std::vector<Triangle*>  m_tris;
     std::vector<Texture*>   m_texs;
-    BVH*                    m_bvh;
+
+    #if defined(ENABLE_AVX)
+        BVH8*               m_bvh;
+    #elif defined(ENABLE_SSE2)
+        BVH4*               m_bvh;
+    #else
+        BVH*                m_bvh;
+    #endif
 
     bool load(const char* filename);
+
+    Mesh();
+    ~Mesh();
 };

@@ -32,10 +32,8 @@ public:
     //=============================================================================================
     // public methods.
     //=============================================================================================
-    BVH();
-    ~BVH();
-
     static BVH* build(std::vector<Triangle*>& tris);
+    void dispose();
     bool intersect(const Ray& ray, HitRecord& record) const;
 
 private:
@@ -47,6 +45,103 @@ private:
     // private methods.
     //=============================================================================================
     BVH( BVH* lhs, BVH* rhs, const Box& box );
-    BVH( size_t count, Triangle** tris );
+    BVH( size_t count, Triangle** tris, const Box& box );
+    ~BVH();
     static BVH* build_sub(size_t count, Triangle** tris);
 };
+
+#if defined(ENABLE_SSE2)
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// BVH4 class
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class BVH4
+{
+    //=============================================================================================
+    // list of friend classes and methods.
+    //=============================================================================================
+    /* NOTHING */
+
+public:
+    //=============================================================================================
+    // public variables.
+    //=============================================================================================
+    /* NOTHING */
+
+    //=============================================================================================
+    // public methods.
+    //=============================================================================================
+    static BVH4* build(std::vector<Triangle*>& tris);
+    void dispose();
+    bool intersect(const Ray& ray, HitRecord& record) const;
+
+private:
+    //=============================================================================================
+    // private variables.
+    //=============================================================================================
+    BVH4*                   m_node[4];
+    Box4                    m_box;
+    ref_array<Triangle*>    m_tris;
+
+    //============================================================================================
+    // private methods.
+    //=============================================================================================
+    static BVH4* build_sub(size_t count, Triangle** tris);
+    BVH4( BVH4* node0, BVH4* node1, BVH4* node2, BVH4* node3, const Box4& box );
+    BVH4( size_t count, Triangle** tris, const Box& box);
+    ~BVH4();
+    bool intersect_sub(const Ray4& ray, HitRecord& record) const;
+    void* operator new      (size_t size);
+    void* operator new[]    (size_t size);
+    void  operator delete   (void* ptr);
+    void  operator delete[] (void* ptr);
+};
+#endif//defined(ENABLE_SSE2)
+
+#if defined(ENABLE_AVX)
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// BVH8 class
+///////////////////////////////////////////////////////////////////////////////////////////////////
+class BVH8
+{
+    //=============================================================================================
+    // list of friend classes and methods.
+    //=============================================================================================
+    /* NOTHING */
+
+public:
+    //=============================================================================================
+    // public variables.
+    //=============================================================================================
+    /* NOTHING */
+
+    //=============================================================================================
+    // public methods.
+    //=============================================================================================
+    static BVH8* build(std::vector<Triangle*>& tris);
+    void dispose();
+    bool intersect(const Ray& ray, HitRecord& record) const;
+
+private:
+    //=============================================================================================
+    // private variables.
+    //=============================================================================================
+    BVH8*                   m_node[8];
+    Box8                    m_box;
+    ref_array<Triangle*>    m_tris;
+
+    //============================================================================================
+    // private methods.
+    //=============================================================================================
+    static BVH8* build_sub(size_t count, Triangle** tris);
+    BVH8(BVH8* n0, BVH8* n1, BVH8* n2, BVH8* n3,
+         BVH8* n4, BVH8* n5, BVH8* n6, BVH8* n7, const Box8& box );
+    BVH8( size_t count, Triangle** tris, const Box& box);
+    ~BVH8();
+    bool intersect_sub(const Ray8& ray, HitRecord& record) const;
+    void* operator new      (size_t size);
+    void* operator new[]    (size_t size);
+    void  operator delete   (void* ptr);
+    void  operator delete[] (void* ptr);
+};
+#endif//defined(ENABLE_AVX)
+

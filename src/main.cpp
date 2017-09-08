@@ -184,8 +184,13 @@ void task_func(TaskData* task, ThreadData* thread_data)
 //-------------------------------------------------------------------------------------------------
 int main(int argc, char** argv)
 {
+    #if 0
     Scene scn;
     scn.save("test_scene.xml");
+    #endif
+
+    auto start = std::chrono::system_clock::now();
+    printf_s("start!\n");
 
     if (argc <= 1)
     {
@@ -228,10 +233,8 @@ int main(int argc, char** argv)
     std::thread thd([&]()
     {
         auto counter = 0;
-        auto start   = std::chrono::system_clock::now();
         auto begin   = start;
 
-        printf_s("start!\n");
         printf_s("* width    : %d\n", w);
         printf_s("* height   : %d\n", h);
         printf_s("* samples  : %d\n", s);

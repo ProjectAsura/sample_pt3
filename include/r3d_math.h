@@ -859,6 +859,17 @@ struct Box4
         maxi[2] = _mm_set1_ps( -F_MAX );
     }
 
+    Box4(const Box& box)
+    {
+        mini[0] = _mm_set1_ps( box.mini.x );
+        mini[1] = _mm_set1_ps( box.mini.y );
+        mini[2] = _mm_set1_ps( box.mini.z );
+
+        maxi[0] = _mm_set1_ps( box.maxi.x );
+        maxi[1] = _mm_set1_ps( box.maxi.y );
+        maxi[2] = _mm_set1_ps( box.maxi.z );
+    }
+
     Box4(const Box& b0, const Box& b1, const Box& b2, const Box& b3)
     {
         mini[0] = _mm_set_ps( b3.mini.x, b2.mini.x, b1.mini.x, b0.mini.x );
@@ -870,6 +881,37 @@ struct Box4
         maxi[2] = _mm_set_ps( b3.maxi.z, b2.maxi.z, b1.maxi.z, b0.maxi.z );
     }
 };
+
+inline void revert(const Box4& box4, Box& b0, Box& b1, Box& b2, Box& b3)
+{
+    alignas(16) float mini_x[4];
+    alignas(16) float mini_y[4];
+    alignas(16) float mini_z[4];
+
+    alignas(16) float maxi_x[4];
+    alignas(16) float maxi_y[4];
+    alignas(16) float maxi_z[4];
+
+    _mm_store_ps(mini_x, box4.mini[0]);
+    _mm_store_ps(mini_y, box4.mini[1]);
+    _mm_store_ps(mini_z, box4.mini[2]);
+
+    _mm_store_ps(maxi_x, box4.maxi[0]);
+    _mm_store_ps(maxi_y, box4.maxi[1]);
+    _mm_store_ps(maxi_z, box4.maxi[2]);
+
+    b0.mini = Vector3(mini_x[0], mini_y[0], mini_z[0]);
+    b0.maxi = Vector3(maxi_x[0], maxi_y[0], maxi_z[0]);
+
+    b1.mini = Vector3(mini_x[1], mini_y[1], mini_z[1]);
+    b1.maxi = Vector3(maxi_x[1], maxi_y[1], maxi_z[1]);
+
+    b2.mini = Vector3(mini_x[2], mini_y[2], mini_z[2]);
+    b2.maxi = Vector3(maxi_x[2], maxi_y[2], maxi_z[2]);
+
+    b3.mini = Vector3(mini_x[3], mini_y[3], mini_z[3]);
+    b3.maxi = Vector3(maxi_x[3], maxi_y[3], maxi_z[3]);
+}
 
 inline bool hit(const Ray4& ray, const Box4& box, int& mask)
 {
@@ -908,7 +950,23 @@ inline bool hit(const Ray4& ray, const Box4& box, int& mask)
     t_min = _mm_max_ps( t_min, n );
     t_max = _mm_min_ps( t_max, f );
 
-    mask = _mm_movemask_ps( _mm_cmpge_ps( t_max, t_min ) );
+    mask = _mm_movemask_ps( _mm_cmple_ps( t_min, t_max ) );
+    return mask > 0;
+}
+
+inline bool hit_non_simd(const Ray4& ray, const Box4& box, int& mask)
+{
+    Ray r = revert(ray);
+
+    Box b0, b1, b2, b3;
+    revert(box, b0, b1, b2, b3);
+
+    auto hit0 = hit(r, b0) ? 1 : 0;
+    auto hit1 = hit(r, b1) ? 1 : 0;
+    auto hit2 = hit(r, b2) ? 1 : 0;
+    auto hit3 = hit(r, b3) ? 1 : 0;
+
+    mask = (hit3 << 3) | (hit2 << 2) | (hit1 << 1) | (hit0 << 0);
     return mask > 0;
 }
 #endif//defined(ENABLE_SSE2)
@@ -971,6 +1029,17 @@ struct Box8
         maxi[2] = _mm256_set1_ps( -F_MAX );
     }
 
+    Box8(const Box& box)
+    {
+        mini[0] = _mm256_set1_ps( box.mini.x );
+        mini[1] = _mm256_set1_ps( box.mini.y );
+        mini[2] = _mm256_set1_ps( box.mini.z );
+
+        maxi[0] = _mm256_set1_ps( box.maxi.x );
+        maxi[1] = _mm256_set1_ps( box.maxi.y );
+        maxi[2] = _mm256_set1_ps( box.maxi.z );
+    }
+
     Box8(const Box& b0, const Box& b1, const Box& b2, const Box& b3,
          const Box& b4, const Box& b5, const Box& b6, const Box& b7)
     {
@@ -983,6 +1052,49 @@ struct Box8
         maxi[2] = _mm256_set_ps( b7.maxi.z, b6.maxi.z, b5.maxi.z, b4.maxi.z, b3.maxi.z, b2.maxi.z, b1.maxi.z, b0.maxi.z );
     }
 };
+
+inline void revert(const Box8& box8, Box& b0, Box& b1, Box& b2, Box& b3, Box& b4, Box& b5, Box& b6, Box& b7)
+{
+    alignas(32) float mini_x[8];
+    alignas(32) float mini_y[8];
+    alignas(32) float mini_z[8];
+
+    alignas(32) float maxi_x[8];
+    alignas(32) float maxi_y[8];
+    alignas(32) float maxi_z[8];
+
+    _mm256_store_ps(mini_x, box8.mini[0]);
+    _mm256_store_ps(mini_y, box8.mini[1]);
+    _mm256_store_ps(mini_z, box8.mini[2]);
+
+    _mm256_store_ps(maxi_x, box8.maxi[0]);
+    _mm256_store_ps(maxi_y, box8.maxi[1]);
+    _mm256_store_ps(maxi_z, box8.maxi[2]);
+
+    b0.mini = Vector3(mini_x[0], mini_y[0], mini_z[0]);
+    b0.maxi = Vector3(maxi_x[0], maxi_y[0], maxi_z[0]);
+
+    b1.mini = Vector3(mini_x[1], mini_y[1], mini_z[1]);
+    b1.maxi = Vector3(maxi_x[1], maxi_y[1], maxi_z[1]);
+
+    b2.mini = Vector3(mini_x[2], mini_y[2], mini_z[2]);
+    b2.maxi = Vector3(maxi_x[2], maxi_y[2], maxi_z[2]);
+
+    b3.mini = Vector3(mini_x[3], mini_y[3], mini_z[3]);
+    b3.maxi = Vector3(maxi_x[3], maxi_y[3], maxi_z[3]);
+
+    b4.mini = Vector3(mini_x[4], mini_y[4], mini_z[4]);
+    b4.maxi = Vector3(maxi_x[4], maxi_y[4], maxi_z[4]);
+
+    b5.mini = Vector3(mini_x[5], mini_y[5], mini_z[5]);
+    b5.maxi = Vector3(maxi_x[5], maxi_y[5], maxi_z[5]);
+
+    b6.mini = Vector3(mini_x[6], mini_y[6], mini_z[6]);
+    b6.maxi = Vector3(maxi_x[6], maxi_y[6], maxi_z[6]);
+
+    b7.mini = Vector3(mini_x[7], mini_y[7], mini_z[7]);
+    b7.maxi = Vector3(maxi_x[7], maxi_y[7], maxi_z[7]);
+}
 
 inline bool hit(const Ray8& ray, const Box8& box, int& mask)
 {
@@ -1022,6 +1134,34 @@ inline bool hit(const Ray8& ray, const Box8& box, int& mask)
     t_max = _mm256_min_ps( t_max, f );
 
     mask = _mm256_movemask_ps( _mm256_cmp_ps( t_max, t_min, _CMP_GE_OS ) );
+
+    return mask > 0;
+}
+
+inline bool hit_non_simd(const Ray8& ray, const Box8& box, int& mask)
+{
+    Ray r = revert(ray);
+
+    Box b0, b1, b2, b3, b4, b5, b6, b7
+    revert(box, b0, b1, b2, b3, b6, b7);
+
+    auto hit0 = hit(r, b0) ? 1 : 0;
+    auto hit1 = hit(r, b1) ? 1 : 0;
+    auto hit2 = hit(r, b2) ? 1 : 0;
+    auto hit3 = hit(r, b3) ? 1 : 0;
+    auto hit4 = hit(r, b4) ? 1 : 0;
+    auto hit5 = hit(r, b5) ? 1 : 0;
+    auto hit6 = hit(r, b6) ? 1 : 0;
+    auto hit7 = hit(r, b7) ? 1 : 0;
+
+    mask  = (hit0 << 0);
+    mask |= (hit1 << 1);
+    mask |= (hit2 << 2);
+    mask |= (hit3 << 3);
+    mask |= (hit4 << 4);
+    mask |= (hit5 << 5);
+    mask |= (hit6 << 6);
+    mask |= (hit7 << 7);
 
     return mask > 0;
 }
