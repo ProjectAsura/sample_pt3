@@ -49,7 +49,7 @@ public:
         auto fy = y * inv_h - 0.5f;
         auto d = axis_x * fx + axis_y * fy + axis_z;
         auto p = pos + d * near_clip;
-        return Ray(p, normalize(d));
+        return make_ray(p, normalize(d));
     }
 
 private:

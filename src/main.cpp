@@ -52,7 +52,7 @@ Vector3 radiance(const Ray& input_ray, Random& random, const Scene* scene)
 {
     Vector3 L(0, 0, 0);
     Vector3 W(1, 1, 1);
-    Ray ray(input_ray.pos, input_ray.dir);
+    Ray ray = make_ray(input_ray.pos, input_ray.dir);
 
     auto direct_light = true;
 
@@ -146,7 +146,7 @@ Vector3 radiance(const Ray& input_ray, Random& random, const Scene* scene)
         //}
 
         // レイを更新.
-        ray = Ray(record.pos, arg.output);
+        ray = make_ray(record.pos, arg.output);
 
         // 重み更新.
         W *= (w / p);

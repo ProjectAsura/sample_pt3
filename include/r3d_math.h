@@ -13,6 +13,14 @@
 #include <cstdint>
 #include <cmath>
 
+#if defined(ENABLE_SSE2)
+#include <emmintrin.h>
+#endif//defined(ENABLE_SSE2)
+
+#if defined(ENABLE_AVX)
+#include <immintrin.h>
+#endif//defined(ENABLE_AVX)
+
 
 //-------------------------------------------------------------------------------------------------
 // Constant Values
@@ -192,11 +200,15 @@ struct Ray
 {
     Vector3 pos;
     Vector3 dir;
-
-    Ray(const Vector3& p, const Vector3& d)
-    : pos(p), dir(d)
-    { /* DO_NOTHING */ }
 };
+
+inline Ray make_ray(const Vector3& pos, const Vector3& dir)
+{
+    Ray result;
+    result.pos = pos;
+    result.dir = dir;
+    return result;
+}
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Random class
@@ -370,6 +382,23 @@ inline float length(const Vector2& value)
 
 inline float length(const Vector3& value)
 { return sqrt(value.x * value.x + value.y * value.y + value.z * value.z); }
+
+inline Vector2 abs(const Vector2& value)
+{
+    return Vector2(
+        abs(value.x),
+        abs(value.y)
+    );
+}
+
+inline Vector3 abs(const Vector3& value)
+{
+    return Vector3(
+        abs(value.x),
+        abs(value.y),
+        abs(value.z)
+    );
+}
 
 inline Vector2 saturate(const Vector2& value)
 {
@@ -633,15 +662,18 @@ struct Box
 {
     Vector3 mini;
     Vector3 maxi;
+    bool    empty;
 
     Box()
     : mini( F_MAX,  F_MAX,  F_MAX)
     , maxi(-F_MAX, -F_MAX, -F_MAX)
+    , empty(true)
     { /* DO_NOTHING */ }
 
     Box(const Vector3& minimum, const Vector3& maximum)
-    : mini(minimum)
-    , maxi(maximum)
+    : mini (minimum)
+    , maxi (maximum)
+    , empty(false)
     { /* DO_NOTHING */ }
 };
 
@@ -692,7 +724,13 @@ inline bool hit(const Ray& ray, const Box& box)
 
 inline Box merge(const Box& lhs, const Box& rhs)
 {
+    if (lhs.empty)
+    { return rhs; }
+    else if (rhs.empty)
+    { return lhs; }
+
     Box result;
+
     result.maxi.x = max(lhs.maxi.x, rhs.maxi.x);
     result.maxi.y = max(lhs.maxi.y, rhs.maxi.y);
     result.maxi.z = max(lhs.maxi.z, rhs.maxi.z);
@@ -706,6 +744,9 @@ inline Box merge(const Box& lhs, const Box& rhs)
 
 inline Box merge(const Box& lhs, const Vector3& rhs)
 {
+    if (lhs.empty)
+    { return Box(rhs, rhs); }
+
     Box result;
     result.maxi.x = max(lhs.maxi.x, rhs.x);
     result.maxi.y = max(lhs.maxi.y, rhs.y);
@@ -773,14 +814,28 @@ struct Ray4
 
 inline Ray4 convert(const Ray& ray)
 {
-    Ray4 result = {};
+    Ray4 result;
     result.pos[0] = _mm_set1_ps( ray.pos.x );
     result.pos[1] = _mm_set1_ps( ray.pos.y );
     result.pos[2] = _mm_set1_ps( ray.pos.z );
 
     result.dir[0] = _mm_set1_ps( ray.dir.x );
     result.dir[1] = _mm_set1_ps( ray.dir.y );
-    reuslt.dir[2] = _mm_set1_ps( ray.dir.z );
+    result.dir[2] = _mm_set1_ps( ray.dir.z );
+
+    return result;
+}
+
+inline Ray revert(const Ray4& ray)
+{
+    Ray result;
+    result.pos.x = _mm_cvtss_f32( ray.pos[0] );
+    result.pos.y = _mm_cvtss_f32( ray.pos[1] );
+    result.pos.z = _mm_cvtss_f32( ray.pos[2] );
+
+    result.dir.x = _mm_cvtss_f32( ray.dir[0] );
+    result.dir.y = _mm_cvtss_f32( ray.dir[1] );
+    result.dir.z = _mm_cvtss_f32( ray.dir[2] );
 
     return result;
 }
@@ -879,6 +934,20 @@ inline Ray8 convert(const Ray& ray)
     result.dir[0] = _mm256_set1_ps( ray.dir.x );
     result.dir[1] = _mm256_set1_ps( ray.dir.y );
     result.dir[2] = _mm256_set1_ps( ray.dir.z );
+
+    return result;
+}
+
+inline Ray revert(const Ray8& ray)
+{
+    Ray result;
+    result.pos.x = _mm256_cvtss_f32( ray.pos[0] );
+    result.pos.y = _mm256_cvtss_f32( ray.pos[1] );
+    result.pos.z = _mm256_cvtss_f32( ray.pos[2] );
+
+    result.dir.x = _mm256_cvtss_f32( ray.dir[0] );
+    result.dir.y = _mm256_cvtss_f32( ray.dir[1] );
+    result.dir.z = _mm256_cvtss_f32( ray.dir[2] );
 
     return result;
 }

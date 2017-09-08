@@ -77,25 +77,10 @@
 				<texture_id>0</texture_id>
 			</value4>
 		</lamberts>
-		<mirrors size="dynamic">
-			<value0>
-				<id>6</id>
-				<color>
-					<x>0.75</x>
-					<y>0.25</y>
-					<z>0.25</z>
-				</color>
-				<emissive>
-					<x>0</x>
-					<y>0</y>
-					<z>0</z>
-				</emissive>
-				<texture_id>0</texture_id>
-			</value0>
-		</mirrors>
+		<mirrors size="dynamic"/>
 		<refracts size="dynamic">
 			<value0>
-				<id>7</id>
+				<id>6</id>
 				<color>
 					<x>0.99000000953674316</x>
 					<y>0.99000000953674316</y>
@@ -175,9 +160,9 @@
 			<value6>
 				<id>7</id>
 				<pos>
-					<x>27</x>
+					<x>73</x>
 					<y>16.5</y>
-					<z>47</z>
+					<z>78</z>
 				</pos>
 				<radius>16.5</radius>
 				<material_id>6</material_id>
@@ -185,24 +170,21 @@
 			<value7>
 				<id>8</id>
 				<pos>
-					<x>73</x>
-					<y>16.5</y>
-					<z>78</z>
-				</pos>
-				<radius>16.5</radius>
-				<material_id>7</material_id>
-			</value7>
-			<value8>
-				<id>9</id>
-				<pos>
 					<x>50</x>
 					<y>81.599998474121094</y>
 					<z>81.599998474121094</z>
 				</pos>
 				<radius>5</radius>
 				<material_id>5</material_id>
-			</value8>
+			</value7>
 		</sphere_shapes>
+		<mesh_shapes size="dynamic">
+			<value0>
+				<id>9</id>
+				<path>domo.smd</path>
+			</value0>
+		</mesh_shapes>
+		<instance_shapes size="dynamic"/>
 		<cameras size="dynamic">
 			<value0>
 				<pos>

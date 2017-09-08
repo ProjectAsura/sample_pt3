@@ -133,9 +133,18 @@ public:
         auto instance = new (std::nothrow) Triangle();
         instance->m_vtx     = vtx;
         instance->m_mat     = mat;
+
         instance->m_edge[0] = vtx[1].pos - vtx[0].pos;
         instance->m_edge[1] = vtx[2].pos - vtx[0].pos;
-        instance->m_edge[2] = vtx[2].pos - vtx[1].pos;
+        instance->m_center  = (vtx[0].pos + vtx[1].pos + vtx[2].pos) / 3.0f;
+
+        instance->m_box.mini = vtx[0].pos;
+        instance->m_box.maxi = vtx[0].pos;
+        instance->m_box.mini = min(instance->m_box.mini, vtx[1].pos);
+        instance->m_box.maxi = max(instance->m_box.maxi, vtx[1].pos);
+        instance->m_box.mini = min(instance->m_box.mini, vtx[2].pos);
+        instance->m_box.maxi = max(instance->m_box.maxi, vtx[2].pos);
+
         return instance;
     }
 
@@ -185,29 +194,18 @@ public:
     const Vertex& vertex(uint32_t index) const
     { return m_vtx[index]; }
 
-    Vector3 center() const
-    { return (m_vtx[0].pos + m_vtx[1].pos + m_vtx[2].pos) / 3.0f; }
+    const Vector3& center() const
+    { return m_center; }
 
-    Box box() const
-    {
-        Box result;
-
-        result.maxi = m_vtx[0].pos;
-        result.mini = m_vtx[0].pos;
-
-        result.maxi = max( result.maxi, m_vtx[1].pos );
-        result.mini = min( result.mini, m_vtx[1].pos );
-
-        result.maxi = max( result.maxi, m_vtx[2].pos );
-        result.mini = min( result.mini, m_vtx[2].pos );
-
-        return result;
-    }
+    const Box& box() const
+    { return m_box; }
 
 private:
     const Vertex*   m_vtx;
     const Material* m_mat;
-    Vector3         m_edge[3];
+    Vector3         m_edge[2];
+    Vector3         m_center;
+    Box             m_box;
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -229,7 +227,7 @@ public:
     {
         auto pos = mul_coord ( ray.pos, m_inv_world );
         auto dir = mul_normal( ray.dir, m_inv_world );
-        auto localRaySet = Ray( pos, normalize(dir) );
+        auto localRaySet = make_ray( pos, normalize(dir) );
 
         if ( m_shape->hit( localRaySet, record ) )
         {
