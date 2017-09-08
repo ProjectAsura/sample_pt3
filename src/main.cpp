@@ -62,7 +62,7 @@ Vector3 radiance(const Ray& input_ray, Random& random, const Scene* scene)
 
         if (!scene->hit(ray, record))
         {
-            //L += W * scene->sample_ibl(ray.dir);
+            L += W * scene->sample_ibl(ray.dir);
             break;
         }
 
