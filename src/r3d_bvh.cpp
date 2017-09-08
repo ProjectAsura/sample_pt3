@@ -8,6 +8,7 @@
 // Includes
 //-------------------------------------------------------------------------------------------------
 #include <r3d_bvh.h>
+#include <algorithm>
 
 
 //-------------------------------------------------------------------------------------------------
@@ -20,22 +21,14 @@ constexpr int BucketCount = 12;     //!< バケット数です.
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 struct Bucket
 {
-    size_t      count;
-    Box         box;
-
-    //---------------------------------------------------------------------------------------------
-    //! @brief      コンストラクタです.
-    //---------------------------------------------------------------------------------------------
-    Bucket()
-    : count (0)
-    , box   ()
-    { /* DO_NOTHING */ }
+    size_t      count = 0;
+    Box         box   = {};
 };
 
 Box create_box(size_t count, Triangle** tris)
 {
-    assert(count == 0);
-    assert(tris == nullptr);
+    assert(count != 0);
+    assert(tris != nullptr);
 
     Box result;
     result.mini = tris[0]->vertex(0).pos;
@@ -59,7 +52,7 @@ Box create_box(size_t count, Triangle** tris)
     return result;
 }
 
-int longes_axis(const Box& box)
+int longest_axis(const Box& box)
 {
     auto dif = box.maxi - box.mini;
     
@@ -122,7 +115,101 @@ BVH* BVH::build(std::vector<Triangle*>& tris)
 
 BVH* BVH::build_sub(size_t count, Triangle** tris)
 {
+    // 最小要素に満たないものは葉ノードとして生成.  2つのノードがそれぞれ子供をもつので 2 * 2 = 4 が最小.
+    if ( count <= 4 )
+    { return new BVH(count, tris); }
 
+    auto bound = create_box( count, tris );
+
+    // 分割軸を決めるためバウンディングボックスの最長軸を取得.
+    auto axis = longest_axis( bound );
+
+    if (bound.maxi.a[axis] == bound.mini.a[axis])
+    { return new BVH(count, tris); }
+
+    // SAH分割バケットの初期化処理.
+    Bucket bucket[BucketCount];
+    for (size_t i=0; i<count; ++i)
+    {
+        auto idx = static_cast<int>(BucketCount * calc_offset( bound, tris[i]->center() ).a[axis]);
+
+        if ( idx == BucketCount ) 
+        { idx = BucketCount - 1; }
+        assert( 0 <= idx && idx < BucketCount );
+
+        bucket[idx].count++;
+        bucket[idx].box = merge( bucket[idx].box, tris[i]->box() );
+    }
+
+    // 分割後の各バケットに対するコストを計算する.
+    float cost[BucketCount - 1];
+    for (auto i=0; i<BucketCount - 1; ++i)
+    {
+        Box b0, b1;
+        size_t count0 = 0, count1 = 0;
+
+        for(auto j=0; j<=i; ++j)
+        {
+            b0 = merge(b0, bucket[j].box);
+            count0 += bucket[j].count;
+        }
+
+        for(auto j=i+1; j<BucketCount; ++j)
+        {
+            b1 = merge(b1, bucket[j].box);
+            count1 += bucket[j].count;
+        }
+
+        cost[i] = 1 + (count0 * surface_area(b0) + count1 * surface_area(b1)) / surface_area(bound);
+    }
+
+    // 最小SAHで分割のためのバケットを求める.
+    auto minCost = cost[0];
+    auto minCostSplitBucket = 0;
+    for(auto i=1; i<BucketCount - 1; ++i)
+    {
+        if (cost[i] < minCost)
+        {
+            minCost = cost[i];
+            minCostSplitBucket = i;
+        }
+    }
+
+    auto mid = count / 2;
+
+    // 選択されたSAHバケットにおいて葉ノードを生成するか，分割するかどうかを決定する.
+    auto leafCost = float(count);
+    if (minCost < leafCost)
+    {
+        auto t_mid = std::partition(
+            &tris[0],
+            &tris[count - 1] + 1,
+            [=](const Triangle* pShape)
+            {
+                auto idx = BucketCount * calc_offset(bound, pShape->center()).a[axis];
+                if ( idx == BucketCount )
+                { idx = BucketCount - 1; }
+                assert( 0 <= idx && idx < BucketCount );
+
+                return idx <= minCostSplitBucket;
+            });
+
+        mid = t_mid - &tris[0];
+    }
+    else
+    {
+        // 最小コスト満たすものがなかったら葉ノードとする.
+        return new BVH(count, tris);
+    }
+
+    size_t cnt0 = mid;
+    size_t cnt1 = count - mid;
+
+    // 再帰呼び出し.
+    return new BVH(
+        BVH::build_sub(cnt0, &tris[0]),
+        BVH::build_sub(cnt1, &tris[mid]),
+        bound);
 }
 
 bool BVH::intersect(const Ray& ray, HitRecord& record) const

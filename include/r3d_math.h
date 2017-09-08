@@ -66,8 +66,15 @@ inline float degree(float rad)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 struct Vector2
 {
-    float x;
-    float y;
+    union 
+    {
+        struct 
+        {
+            float x;
+            float y;
+        };
+        float a[2];
+    };
 
     Vector2()
     { /* DO_NOTHING */ }
@@ -119,9 +126,16 @@ struct Vector2
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 struct Vector3
 {
-    float x;
-    float y;
-    float z;
+    union
+    {
+        struct 
+        {
+            float x;
+            float y;
+            float z;
+        };
+        float a[3];
+    };
 
     Vector3()
     { /* DO_NOTHING */ }
@@ -724,6 +738,28 @@ inline Box mul(const Box& box, const Matrix& matrix)
     auto maxi = mul(box.maxi, matrix);
     return Box(mini, maxi);
 }
+
+inline float surface_area( const Vector3& a, const Vector3& b, const Vector3& c )
+{
+    auto X = ( b.y - a.y ) * ( c.z - a.z ) - ( c.y - a.y ) * ( b.z - a.z );
+    auto Y = ( b.z - a.z ) * ( c.x - a.x ) - ( c.z - a.z ) * ( b.x - a.x );
+    auto Z = ( b.x - a.x ) * ( c.y - a.y ) - ( c.x - a.x ) * ( b.y - a.y );
+    return 0.5f * sqrtf( ( X * X ) + ( Y * Y ) + ( Z * Z ) );
+}
+
+inline float surface_area( const Box& box )
+{
+    auto X = fabs( box.maxi.x - box.mini.x );
+    auto Y = fabs( box.maxi.y - box.mini.y );
+    auto Z = fabs( box.maxi.z - box.mini.z );
+    return 2.0f * ( ( X * Y ) + ( X * Z ) + ( Y * Z ) );
+}
+
+inline float surface_area( const float radius )
+{
+    return 4.0f * F_PI * ( radius * radius );
+}
+
 
 #if defined(ENABLE_SSE2)
 ///////////////////////////////////////////////////////////////////////////////////////////////////

@@ -18,8 +18,9 @@
 //-------------------------------------------------------------------------------------------------
 struct Material;
 struct Shape;
-struct BVH4;
-struct BVH8;
+class BVH;
+class BVH4;
+class BVH8;
 class Texture;
 
 
@@ -184,6 +185,25 @@ public:
     const Vertex& vertex(uint32_t index) const
     { return m_vtx[index]; }
 
+    Vector3 center() const
+    { return (m_vtx[0].pos + m_vtx[1].pos + m_vtx[2].pos) / 3.0f; }
+
+    Box box() const
+    {
+        Box result;
+
+        result.maxi = m_vtx[0].pos;
+        result.mini = m_vtx[0].pos;
+
+        result.maxi = max( result.maxi, m_vtx[1].pos );
+        result.mini = min( result.mini, m_vtx[1].pos );
+
+        result.maxi = max( result.maxi, m_vtx[2].pos );
+        result.mini = min( result.mini, m_vtx[2].pos );
+
+        return result;
+    }
+
 private:
     const Vertex*   m_vtx;
     const Material* m_mat;
@@ -241,7 +261,7 @@ private:
     std::vector<Material*>  m_mats;
     std::vector<Triangle*>  m_tris;
     std::vector<Texture*>   m_texs;
-    BVH8*                   m_bvh;
+    BVH*                    m_bvh;
 
     bool load(const char* filename);
 };

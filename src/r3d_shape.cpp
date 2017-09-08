@@ -10,6 +10,7 @@
 #include <r3d_shape.h>
 #include <r3d_texture.h>
 #include <r3d_material.h>
+#include <r3d_bvh.h>
 #include <smd.h>
 
 
@@ -31,13 +32,14 @@ Mesh* Mesh::create(const char* filename)
 
 bool Mesh::hit(const Ray& ray, HitRecord& record) const
 {
-    bool hit = false;
-    for(size_t i=0; i<m_tris.size(); ++i)
-    {
-        hit |= m_tris[i]->hit(ray, record);
-    }
+    //bool hit = false;
+    //for(size_t i=0; i<m_tris.size(); ++i)
+    //{
+    //    hit |= m_tris[i]->hit(ray, record);
+    //}
 
-    return hit;
+    //return hit;
+    return m_bvh->intersect(ray, record);
 }
 
 bool Mesh::load(const char* filename)
@@ -135,6 +137,8 @@ bool Mesh::load(const char* filename)
     }
 
     fclose(file);
+
+    m_bvh = BVH::build(m_tris);
 
     return true;
 }
