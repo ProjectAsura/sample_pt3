@@ -309,7 +309,7 @@ void BVH4::operator delete[] (void* ptr)
 BVH8::BVH8
 (
     BVH8* n0, BVH8* n1, BVH8* n2, BVH8* n3,
-    BVH8* n4, BVH8* n5, BVH8* n6, BVH8* n7
+    BVH8* n4, BVH8* n5, BVH8* n6, BVH8* n7,
     const Box8& box
 )
 {
@@ -350,7 +350,7 @@ void BVH8::dispose()
 
 bool BVH8::intersect(const Ray& ray, HitRecord& record) const
 {
-    Ray8 ray4 = convert(ray);
+    Ray8 ray8 = make_ray8(ray);
     return intersect_sub(ray8, record);
 }
 
@@ -442,7 +442,7 @@ BVH8* BVH8::build_sub(size_t count, Triangle** tris)
         build_sub(cnt4, &tris[idx4]),
         build_sub(cnt5, &tris[idx5]),
         build_sub(cnt6, &tris[idx6]),
-        build_sub(cnt7, &tris[idx7])
+        build_sub(cnt7, &tris[idx7]),
         Box8(box));
 }
 

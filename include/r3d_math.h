@@ -18,7 +18,7 @@
 #endif//defined(ENABLE_SSE2)
 
 #if defined(ENABLE_AVX)
-#include <immintrin.h>
+#include <intrin.h>
 #endif//defined(ENABLE_AVX)
 
 
@@ -973,6 +973,13 @@ inline bool hit_non_simd(const Ray4& ray, const Box4& box, int& mask)
 
 
 #if defined(ENABLE_AVX)
+
+#ifdef _MSC_VER
+// 何故かヘッダに定義されていないので自前で定義.
+inline float _mm256_cvtss_f32(__m256 __a)
+{ return __a.m256_f32[0]; }
+#endif
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Ray8 structure
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -982,7 +989,7 @@ struct Ray8
     __m256 dir[3];
 };
 
-inline Ray8 convert(const Ray& ray)
+inline Ray8 make_ray8(const Ray& ray)
 {
     Ray8 result;
     result.pos[0] = _mm256_set1_ps( ray.pos.x );
@@ -1142,8 +1149,8 @@ inline bool hit_non_simd(const Ray8& ray, const Box8& box, int& mask)
 {
     Ray r = revert(ray);
 
-    Box b0, b1, b2, b3, b4, b5, b6, b7
-    revert(box, b0, b1, b2, b3, b6, b7);
+    Box b0, b1, b2, b3, b4, b5, b6, b7;
+    revert(box, b0, b1, b2, b3, b4, b5, b6, b7);
 
     auto hit0 = hit(r, b0) ? 1 : 0;
     auto hit1 = hit(r, b1) ? 1 : 0;
