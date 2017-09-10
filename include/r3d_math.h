@@ -974,12 +974,6 @@ inline bool hit_non_simd(const Ray4& ray, const Box4& box, int& mask)
 
 #if defined(ENABLE_AVX)
 
-#ifdef _MSC_VER
-// 何故かヘッダに定義されていないので自前で定義.
-inline float _mm256_cvtss_f32(__m256 __a)
-{ return __a.m256_f32[0]; }
-#endif
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Ray8 structure
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1005,14 +999,16 @@ inline Ray8 make_ray8(const Ray& ray)
 
 inline Ray revert(const Ray8& ray)
 {
-    Ray result;
-    result.pos.x = _mm256_cvtss_f32( ray.pos[0] );
-    result.pos.y = _mm256_cvtss_f32( ray.pos[1] );
-    result.pos.z = _mm256_cvtss_f32( ray.pos[2] );
+    alignas(16) float temp[4];
 
-    result.dir.x = _mm256_cvtss_f32( ray.dir[0] );
-    result.dir.y = _mm256_cvtss_f32( ray.dir[1] );
-    result.dir.z = _mm256_cvtss_f32( ray.dir[2] );
+    Ray result;
+    _mm256_store_ps(temp, ray.pos[0]);    result.pos.x = temp[0];
+    _mm256_store_ps(temp, ray.pos[1]);    result.pos.y = temp[0];
+    _mm256_store_ps(temp, ray.pos[2]);    result.pos.z = temp[0];
+
+    _mm256_store_ps(temp, ray.dir[0]);   result.dir.x = temp[0];
+    _mm256_store_ps(temp, ray.dir[1]);   result.dir.x = temp[0];
+    _mm256_store_ps(temp, ray.dir[2]);   result.dir.x = temp[0];
 
     return result;
 }

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <cereal>
 	<scene>
-		<width>480</width>
-		<height>270</height>
+		<width>1920</width>
+		<height>1080</height>
 		<samples>512</samples>
 		<textures size="dynamic"/>
 		<lamberts size="dynamic">
@@ -100,102 +100,32 @@
 			<value0>
 				<id>1</id>
 				<pos>
-					<x>100001</x>
-					<y>40.799999237060547</y>
-					<z>81.599998474121094</z>
-				</pos>
-				<radius>100000</radius>
-				<material_id>1</material_id>
-			</value0>
-			<value1>
-				<id>2</id>
-				<pos>
-					<x>-99901</x>
-					<y>40.799999237060547</y>
-					<z>81.599998474121094</z>
-				</pos>
-				<radius>100000</radius>
-				<material_id>2</material_id>
-			</value1>
-			<value2>
-				<id>3</id>
-				<pos>
-					<x>50</x>
-					<y>40.799999237060547</y>
-					<z>100000</z>
-				</pos>
-				<radius>100000</radius>
-				<material_id>3</material_id>
-			</value2>
-			<value3>
-				<id>4</id>
-				<pos>
-					<x>50</x>
-					<y>40.799999237060547</y>
-					<z>-99830</z>
-				</pos>
-				<radius>100000</radius>
-				<material_id>4</material_id>
-			</value3>
-			<value4>
-				<id>5</id>
-				<pos>
-					<x>50</x>
-					<y>100000</y>
-					<z>81.599998474121094</z>
-				</pos>
-				<radius>100000</radius>
-				<material_id>3</material_id>
-			</value4>
-			<value5>
-				<id>6</id>
-				<pos>
-					<x>50</x>
-					<y>-99918.3984375</y>
-					<z>81.599998474121094</z>
-				</pos>
-				<radius>100000</radius>
-				<material_id>3</material_id>
-			</value5>
-			<value6>
-				<id>7</id>
-				<pos>
-					<x>73</x>
-					<y>16.5</y>
-					<z>78</z>
-				</pos>
-				<radius>16.5</radius>
-				<material_id>6</material_id>
-			</value6>
-			<value7>
-				<id>8</id>
-				<pos>
-					<x>50</x>
+					<x>00</x>
 					<y>81.599998474121094</y>
 					<z>81.599998474121094</z>
 				</pos>
 				<radius>5</radius>
 				<material_id>5</material_id>
-			</value7>
+			</value0>
 		</sphere_shapes>
 		<mesh_shapes size="dynamic">
 			<value0>
-				<id>9</id>
-				<path>domo.smd</path>
+				<id>2</id>
+				<path>scene.smd</path>
 			</value0>
 		</mesh_shapes>
 		<instance_shapes size="dynamic"/>
 		<cameras size="dynamic">
 			<value0>
 				<pos>
-					<x>50</x>
-					<y>52</y>
-					<z>295.60000610351563</z>
+					<x>-1000</x>
+					<y>200</y>
+					<z>0.0</z>
 				</pos>
 				<dir>
-					<x>0</x>
-					<y>-0.042573362588882446</y>
-					<z>-0.99909329414367676</z>
+					<x>1</x>
+					<y>-0.1</y>
+					<z>0</z>
 				</dir>
 				<upward>
 					<x>0</x>
